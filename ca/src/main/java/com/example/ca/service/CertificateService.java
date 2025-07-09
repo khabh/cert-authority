@@ -1,11 +1,13 @@
 package com.example.ca.service;
 
+import com.example.ca.domain.CertificationAuthority;
 import com.example.ca.domain.DistinguishedName;
 import com.example.ca.domain.repository.CertificateAuthorityRepository;
 import com.example.ca.exception.CaException;
 import com.example.ca.service.dto.CertificateDto;
 import com.example.ca.service.dto.RootCertificateIssueDto;
 import java.security.KeyPair;
+import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import lombok.RequiredArgsConstructor;
 import org.bouncycastle.asn1.x500.X500Name;
@@ -45,6 +47,8 @@ public class CertificateService {
         );
         String certificatePem = pemConverter.convertCertificateToPem(certificate);
 
+        saveCertificateAuthority(distinguishedName, keyPair.getPrivate());
+
         return new CertificateDto(certificatePem);
     }
 
@@ -52,5 +56,11 @@ public class CertificateService {
         if (certificateAuthorityRepository.existsByDistinguishedName(distinguishedName)) {
             throw new CaException("해당 DN으로 등록된 root CA가 존재합니다.");
         }
+    }
+
+    private void saveCertificateAuthority(DistinguishedName distinguishedName, PrivateKey privateKey) {
+        String secretKey = pemConverter.convertPrivateKeyToPem(privateKey);
+        CertificationAuthority certificationAuthority = new CertificationAuthority(distinguishedName, secretKey);
+        certificateAuthorityRepository.save(certificationAuthority);
     }
 }
