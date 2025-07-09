@@ -2,11 +2,12 @@ package com.example.ca.domain;
 
 import com.example.ca.exception.CaException;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -86,22 +87,26 @@ public class DistinguishedName {
     }
 
     public X500Name toX500Name() {
-        return createName(List.of(
-            Map.entry(BCStyle.C, countryName),
-            Map.entry(BCStyle.ST, stateOrProvinceName),
-            Map.entry(BCStyle.L, localityName),
-            Map.entry(BCStyle.O, organizationName),
-            Map.entry(BCStyle.OU, organizationalUnitName),
-            Map.entry(BCStyle.CN, commonName)
-        ));
-    }
-
-    private X500Name createName(List<Map.Entry<ASN1ObjectIdentifier, String>> rdns) {
         X500NameBuilder builder = new X500NameBuilder(BCStyle.INSTANCE);
-        rdns.stream()
-            .filter(entry -> entry.getValue() != null && !entry.getValue().isBlank())
-            .forEach(entry -> builder.addRDN(entry.getKey(), entry.getValue()));
+
+        Stream.of(
+                  rdnIfNotBlank(BCStyle.C, countryName),
+                  rdnIfNotBlank(BCStyle.ST, stateOrProvinceName),
+                  rdnIfNotBlank(BCStyle.L, localityName),
+                  rdnIfNotBlank(BCStyle.O, organizationName),
+                  rdnIfNotBlank(BCStyle.OU, organizationalUnitName),
+                  rdnIfNotBlank(BCStyle.CN, commonName)
+              ).flatMap(Optional::stream)
+              .forEach(rdn -> builder.addRDN(rdn.getKey(), rdn.getValue()));
 
         return builder.build();
+    }
+
+
+    private Optional<Map.Entry<ASN1ObjectIdentifier, String>> rdnIfNotBlank(ASN1ObjectIdentifier key, String value) {
+        if (value == null || value.isBlank()) {
+            return Optional.empty();
+        }
+        return Optional.of(Map.entry(key, value));
     }
 }
