@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.ca.exception.CaException;
+import org.bouncycastle.asn1.x500.X500Name;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -43,5 +44,37 @@ class DistinguishedNameTest {
             invalidCountry
         )).isInstanceOf(CaException.class)
           .hasMessageContaining("Country Name " + invalidCountry + " is invalid");
+    }
+
+    @Test
+    @DisplayName("from(String)으로 X500 문자열을 DistinguishedName으로 변환할 수 있다.")
+    void fromRawName() {
+        String rawName = "C=KR,ST=Seoul,L=Seoul,O=ExampleOrg,OU=DevUnit,CN=Alice";
+
+        DistinguishedName parsed = DistinguishedName.from(rawName);
+
+        assertThat(parsed.getCommonName()).isEqualTo("Alice");
+        assertThat(parsed.getOrganizationName()).isEqualTo("ExampleOrg");
+        assertThat(parsed.getOrganizationalUnitName()).isEqualTo("DevUnit");
+        assertThat(parsed.getLocalityName()).isEqualTo("Seoul");
+        assertThat(parsed.getStateOrProvinceName()).isEqualTo("Seoul");
+        assertThat(parsed.getCountryName()).isEqualTo("KR");
+    }
+
+    @Test
+    @DisplayName("null 또는 공백 필드는 toX500Name 변환 시 제외된다.")
+    void x500NameSkipsNullOrBlankFields() {
+        DistinguishedName dn = DistinguishedName.builder()
+                                                .commonName("Alice")
+                                                .countryName("KR")
+                                                .organizationName("  ")
+                                                .build();
+
+        X500Name x500Name = dn.toX500Name();
+        String x500Str = x500Name.toString();
+
+        assertThat(x500Str).contains("CN=Alice");
+        assertThat(x500Str).contains("C=KR");
+        assertThat(x500Str).doesNotContain("O=");
     }
 }
