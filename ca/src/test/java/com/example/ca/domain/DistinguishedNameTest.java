@@ -17,7 +17,6 @@ class DistinguishedNameTest {
         String validCountry = "KR";
 
         DistinguishedName dn = new DistinguishedName(
-            null,
             "Alice",
             "ExampleOrg",
             "DevUnit",
@@ -36,7 +35,6 @@ class DistinguishedNameTest {
     @DisplayName("잘못된 countryName이면 CaException이 발생한다.")
     void new2(String invalidCountry) {
         assertThatThrownBy(() -> new DistinguishedName(
-            null,
             "Alice",
             "ExampleOrg",
             "DevUnit",
