@@ -24,7 +24,7 @@ public class CertificateUiController {
 
     @GetMapping("/")
     public String redirectToRootCa() {
-        return "redirect:/certificates/root/create";
+        return "redirect:/dashboard";
     }
 
     @GetMapping("/certificates/root/create")

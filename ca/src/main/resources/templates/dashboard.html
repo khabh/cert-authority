@@ -102,57 +102,85 @@
       font-size: 24px;
       cursor: pointer;
     }
+
+    .floating-root-btn {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background-color: #1565c0;
+      color: white;
+      border: none;
+      border-radius: 50px;
+      padding: 14px 24px;
+      font-size: 1em;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      transition: background-color 0.3s ease;
+      z-index: 10000;
+    }
+
+    .floating-root-btn:hover {
+      background-color: #0d3b70;
+    }
   </style>
   <script src="https://unpkg.com/htmx.org@1.9.2"></script>
 </head>
-<body>
-<h1>Certification Authority Tree</h1>
 
-<div th:replace="~{fragments/ca-node :: renderNode(${caTree})}"></div>
-<div id="ca-modal" class="modal hidden">
-  <div class="modal-content">
-    <span class="close-btn" onclick="closeModal()">&times;</span>
-    <div id="ca-modal-content">
+<body>
+<div th:replace="fragments/nav :: navigation"></div>
+<div class="con" style="margin: 0; padding-left: 240px;">
+  <h1>Certification Authority Tree</h1>
+
+  <div th:replace="~{fragments/ca-node :: renderNode(${caTree})}"></div>
+  <div id="ca-modal" class="modal hidden">
+    <div class="modal-content">
+      <span class="close-btn" onclick="closeModal()">&times;</span>
+      <div id="ca-modal-content">
+      </div>
     </div>
   </div>
+  <button class="floating-root-btn" onclick="location.href='/certificates/root/create'">
+    Root CA 발급
+  </button>
+  <script>
+    function toggleChildren(button) {
+      const parent = button.closest('li');
+      const wrapper = parent.querySelector('.children-wrapper');
+      const isHidden = wrapper.classList.contains('hidden');
+
+      if (isHidden) {
+        wrapper.classList.remove('hidden');
+        button.textContent = '▼';
+      } else {
+        wrapper.classList.add('hidden');
+        button.textContent = '▶';
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      document.querySelectorAll('.children-wrapper').forEach(el => {
+        el.classList.add('hidden');
+      });
+      document.querySelectorAll('.toggle-btn').forEach(btn => {
+        btn.textContent = '▶';
+      });
+    });
+
+    function openModal() {
+      document.getElementById('ca-modal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('ca-modal').classList.add('hidden');
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeModal();
+      }
+    });
+  </script>
 </div>
-<script>
-  function toggleChildren(button) {
-    const parent = button.closest('li');
-    const wrapper = parent.querySelector('.children-wrapper');
-    const isHidden = wrapper.classList.contains('hidden');
-
-    if (isHidden) {
-      wrapper.classList.remove('hidden');
-      button.textContent = '▼';
-    } else {
-      wrapper.classList.add('hidden');
-      button.textContent = '▶';
-    }
-  }
-
-  document.addEventListener("DOMContentLoaded", () => {
-    document.querySelectorAll('.children-wrapper').forEach(el => {
-      el.classList.add('hidden');
-    });
-    document.querySelectorAll('.toggle-btn').forEach(btn => {
-      btn.textContent = '▶';
-    });
-  });
-
-  function openModal() {
-    document.getElementById('ca-modal').classList.remove('hidden');
-  }
-
-  function closeModal() {
-    document.getElementById('ca-modal').classList.add('hidden');
-  }
-
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      closeModal();
-    }
-  });
-</script>
 </body>
 </html>
