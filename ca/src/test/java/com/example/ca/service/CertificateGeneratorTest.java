@@ -7,6 +7,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.example.ca.exception.CaException;
+import com.example.ca.service.command.CertificateGenerateCommand;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.cert.CertificateException;
@@ -32,38 +33,45 @@ class CertificateGeneratorTest {
     private final JcaX509CertificateConverter certificateConverter = new JcaX509CertificateConverter().setProvider(new BouncyCastleProvider());
 
     private CertificateGenerator generator;
-    private KeyPair keyPair;
-    private X500Name issuer;
-    private X500Name subject;
     private int validityDays;
+    private KeyPair keyPair;
+    private CertificateGenerateCommand command;
 
     @BeforeEach
     void setUp() throws Exception {
         generator = new CertificateGenerator(fixedClock, contentSignerBuilder, certificateConverter);
         keyPair = KeyPairGenerator.getInstance("RSA").generateKeyPair();
-        issuer = new X500Name("CN=Root,O=ExampleOrg,C=KR");
-        subject = new X500Name("CN=Leaf,O=ExampleOrg,C=KR");
         validityDays = 365;
+        command = CertificateGenerateCommand.builder()
+                                            .issuer(new X500Name("CN=Root,O=ExampleOrg,C=KR"))
+                                            .subject(new X500Name("CN=Leaf,O=ExampleOrg,C=KR"))
+                                            .subjectPublicKey(keyPair.getPublic())
+                                            .issuerPrivateKey(keyPair.getPrivate())
+                                            .validityDays(validityDays)
+                                            .build();
     }
 
     @Test
     @DisplayName("인증서 생성 시 NotBefore 날짜가 고정된 Clock와 일치해야 한다.")
     void generateCertificate1() {
-        X509Certificate cert = generator.generateCertificate(issuer, subject, keyPair, validityDays);
+        X509Certificate cert = generator.generateCertificate(command);
+
         assertThat(cert.getNotBefore().toInstant()).isEqualTo(fixedInstant);
     }
 
     @Test
     @DisplayName("인증서 생성 시 NotAfter 날짜가 유효기간만큼 더해진 날짜여야 한다.")
     void generateCertificate2() {
-        X509Certificate cert = generator.generateCertificate(issuer, subject, keyPair, validityDays);
+        X509Certificate cert = generator.generateCertificate(command);
+
         assertThat(cert.getNotAfter().toInstant()).isEqualTo(fixedInstant.plus(validityDays, ChronoUnit.DAYS));
     }
 
     @Test
     @DisplayName("인증서 생성 시 Issuer DN이 올바르게 설정되어야 한다.")
     void generateCertificate3() {
-        X509Certificate cert = generator.generateCertificate(issuer, subject, keyPair, validityDays);
+        X509Certificate cert = generator.generateCertificate(command);
+
         assertThat(cert.getIssuerX500Principal().getName()).contains("CN=Root")
                                                            .contains("O=ExampleOrg")
                                                            .contains("C=KR");
@@ -72,7 +80,8 @@ class CertificateGeneratorTest {
     @Test
     @DisplayName("인증서 생성 시 Subject DN이 올바르게 설정되어야 한다.")
     void generateCertificate4() {
-        X509Certificate cert = generator.generateCertificate(issuer, subject, keyPair, validityDays);
+        X509Certificate cert = generator.generateCertificate(command);
+
         assertThat(cert.getSubjectX500Principal().getName()).contains("CN=Leaf")
                                                             .contains("O=ExampleOrg")
                                                             .contains("C=KR");
@@ -81,7 +90,8 @@ class CertificateGeneratorTest {
     @Test
     @DisplayName("인증서 생성 시 공개키가 KeyPair의 공개키와 일치해야 한다.")
     void generateCertificate5() {
-        X509Certificate cert = generator.generateCertificate(issuer, subject, keyPair, validityDays);
+        X509Certificate cert = generator.generateCertificate(command);
+
         assertThat(cert.getPublicKey()).isEqualTo(keyPair.getPublic());
     }
 
@@ -93,7 +103,7 @@ class CertificateGeneratorTest {
 
         CertificateGenerator brokenGenerator = new CertificateGenerator(fixedClock, mockSignerBuilder, certificateConverter);
 
-        assertThatThrownBy(() -> brokenGenerator.generateCertificate(issuer, subject, keyPair, validityDays))
+        assertThatThrownBy(() -> brokenGenerator.generateCertificate(command))
             .isInstanceOf(CaException.class)
             .hasMessageContaining("인증서 서명자 생성에 실패했습니다.");
     }
@@ -106,7 +116,7 @@ class CertificateGeneratorTest {
 
         CertificateGenerator brokenGenerator = new CertificateGenerator(fixedClock, contentSignerBuilder, mockConverter);
 
-        assertThatThrownBy(() -> brokenGenerator.generateCertificate(issuer, subject, keyPair, validityDays))
+        assertThatThrownBy(() -> brokenGenerator.generateCertificate(command))
             .isInstanceOf(CaException.class)
             .hasMessageContaining("X.509 인증서 변환에 실패했습니다.");
     }
