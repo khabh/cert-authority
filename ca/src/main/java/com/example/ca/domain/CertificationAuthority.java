@@ -78,4 +78,11 @@ public class CertificationAuthority {
     public String getCommonName() {
         return distinguishedName.getCommonName();
     }
+
+    public Long getIssuerId() {
+        if (issuer == null) {
+            return null;
+        }
+        return issuer.getId();
+    }
 }

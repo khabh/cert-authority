@@ -101,19 +101,17 @@ public class CertificateService {
     }
 
     public List<CertificationAuthorityTreeDto> getCertificationAuthorityTree() {
-        List<CertificationAuthority> all = certificateAuthorityRepository.findAll();
+        List<CertificationAuthority> certificationAuthorities = certificateAuthorityRepository.findAll();
+        List<CertificationAuthority> rootCertificationAuthorities = certificationAuthorities.stream()
+                                                                                            .filter(CertificationAuthority::isRoot)
+                                                                                            .toList();
+        Map<Long, List<CertificationAuthority>> subCertificationAuthorities = certificationAuthorities.stream()
+                                                                                                      .filter(CertificationAuthority::isSub)
+                                                                                                      .collect(Collectors.groupingBy(CertificationAuthority::getIssuerId));
 
-        List<CertificationAuthority> roots = all.stream()
-                                                .filter(CertificationAuthority::isRoot)
-                                                .toList();
-        Map<Long, List<CertificationAuthority>> childMap = all.stream()
-                                                              .filter(CertificationAuthority::isSub)
-                                                              .collect(Collectors.groupingBy(ca -> ca.getIssuer()
-                                                                                                     .getId()));
-
-        return roots.stream()
-                    .map(ca -> CertificationAuthorityTreeDto.from(ca, childMap))
-                    .toList();
+        return rootCertificationAuthorities.stream()
+                                           .map(ca -> CertificationAuthorityTreeDto.from(ca, subCertificationAuthorities))
+                                           .toList();
     }
 
     private CertificateGenerateCommand createCommand(
