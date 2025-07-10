@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Root Certificate 발급</title>
+  <script src="https://unpkg.com/htmx.org@1.9.2"></script>
+</head>
+<body>
+<h1>Root CA 인증서 발급</h1>
+
+<form id="root-ca-form"
+      hx-post="/certificates/root"
+      hx-target="#result"
+      hx-swap="innerHTML"
+      hx-trigger="submit"
+      method="post">
+  <label>Common Name (CN): <input type="text" name="commonName" required></label><br/>
+  <label>Organization (O): <input type="text" name="organizationName"></label><br/>
+  <label>Org Unit (OU): <input type="text" name="organizationalUnit"></label><br/>
+  <label>Locality (L): <input type="text" name="localityName"></label><br/>
+  <label>State (ST): <input type="text" name="stateOrProvinceName"></label><br/>
+  <label>Country (C): <input type="text" name="countryName" required></label><br/>
+  <button type="submit">발급하기</button>
+</form>
+
+<div id="result"></div>
+
+</body>
+</html>
