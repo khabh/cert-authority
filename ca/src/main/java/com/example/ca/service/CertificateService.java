@@ -9,6 +9,7 @@ import com.example.ca.service.dto.CertificateDto;
 import com.example.ca.service.dto.CertificateIssueDto;
 import com.example.ca.service.dto.CertificationAuthorityDto;
 import com.example.ca.service.dto.RootCertificateIssueDto;
+import java.io.StringWriter;
 import java.security.InvalidKeyException;
 import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
@@ -18,6 +19,7 @@ import java.security.cert.X509Certificate;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.bouncycastle.asn1.x500.X500Name;
+import org.bouncycastle.openssl.jcajce.JcaPEMWriter;
 import org.bouncycastle.pkcs.PKCS10CertificationRequest;
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest;
 import org.springframework.stereotype.Service;
@@ -32,7 +34,6 @@ public class CertificateService {
     private final CertificateGenerator certificateGenerator;
     private final CsrProcessor csrProcessor;
     private final PrivateKeyParser privateKeyParser;
-    private final PemConverter pemConverter;
     private final CertificateAuthorityRepository certificateAuthorityRepository;
 
     @Transactional
@@ -41,7 +42,7 @@ public class CertificateService {
         CertificationAuthority ca = findCertificationAuthority(certificateIssueDto.certificateAuthorityId());
         CertificateGenerateCommand command = createCommand(certificateIssueDto, ca, csr);
         X509Certificate cert = certificateGenerator.generateCertificate(command);
-        String certPem = pemConverter.toPem(cert);
+        String certPem = toPem(cert);
 
         return new CertificateDto(certPem);
     }
@@ -61,7 +62,7 @@ public class CertificateService {
                                                                        .validityDays(365)
                                                                        .build();
         X509Certificate certificate = certificateGenerator.generateCertificate(command);
-        String certificatePem = pemConverter.toPem(certificate);
+        String certificatePem = toPem(certificate);
 
         saveCertificateAuthority(distinguishedName, keyPair.getPrivate());
 
@@ -76,7 +77,7 @@ public class CertificateService {
     }
 
     private void saveCertificateAuthority(DistinguishedName distinguishedName, PrivateKey privateKey) {
-        String secretKey = pemConverter.toPem(privateKey);
+        String secretKey = toPem(privateKey);
         CertificationAuthority certificationAuthority = new CertificationAuthority(distinguishedName, secretKey);
         certificateAuthorityRepository.save(certificationAuthority);
     }
@@ -112,7 +113,7 @@ public class CertificateService {
                                              .orElseThrow(() -> new CaException("해당 ID의 CA가 존재하지 않습니다."));
     }
 
-    private static DistinguishedName dtoToDistinguishedName(RootCertificateIssueDto rootCertificateIssueDto) {
+    private DistinguishedName dtoToDistinguishedName(RootCertificateIssueDto rootCertificateIssueDto) {
         return DistinguishedName.builder()
                                 .commonName(rootCertificateIssueDto.commonName())
                                 .organizationName(rootCertificateIssueDto.organizationName())
@@ -121,5 +122,17 @@ public class CertificateService {
                                 .stateOrProvinceName(rootCertificateIssueDto.stateOrProvinceName())
                                 .countryName(rootCertificateIssueDto.countryName())
                                 .build();
+    }
+
+    private String toPem(Object object) {
+        try (StringWriter writer = new StringWriter();
+            JcaPEMWriter pemWriter = new JcaPEMWriter(writer)) {
+            pemWriter.writeObject(object);
+            pemWriter.flush();
+
+            return writer.toString();
+        } catch (Exception e) {
+            throw new CaException("PEM 변환에 실패했습니다.", e);
+        }
     }
 }
