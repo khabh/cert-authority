@@ -4,6 +4,7 @@ import com.example.ca.service.CertificateService;
 import com.example.ca.service.dto.CertificateDto;
 import com.example.ca.service.dto.CertificateIssueDto;
 import com.example.ca.service.dto.CertificationAuthorityDto;
+import com.example.ca.service.dto.CertificationAuthorityTreeDto;
 import com.example.ca.service.dto.RootCertificateIssueDto;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -48,5 +49,12 @@ public class CertificateUiController {
         CertificateDto certificateDto = certificateService.issueRootCertificate(dto);
         model.addAttribute("certificate", certificateDto.certificate());
         return "fragments/certificate :: result";
+    }
+
+    @GetMapping("/dashboard")
+    public String viewCaTree(Model model) {
+        List<CertificationAuthorityTreeDto> tree = certificateService.getCertificationAuthorityTree();
+        model.addAttribute("caTree", tree);
+        return "dashboard";
     }
 }
