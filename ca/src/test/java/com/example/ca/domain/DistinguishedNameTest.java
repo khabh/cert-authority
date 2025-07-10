@@ -63,7 +63,7 @@ class DistinguishedNameTest {
 
     @Test
     @DisplayName("null 또는 공백 필드는 toX500Name 변환 시 제외된다.")
-    void x500NameSkipsNullOrBlankFields() {
+    void toX500Name() {
         DistinguishedName dn = DistinguishedName.builder()
                                                 .commonName("Alice")
                                                 .countryName("KR")

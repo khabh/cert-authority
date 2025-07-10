@@ -96,7 +96,7 @@ class CertificateGeneratorTest {
     }
 
     @Test
-    @DisplayName("ContentSigner 생성 중 예외가 발생하면 CaException이 발생한다..")
+    @DisplayName("ContentSigner 생성 중 예외가 발생하면 CaException이 발생한다.")
     void generateCertificate6() throws Exception {
         JcaContentSignerBuilder mockSignerBuilder = mock(JcaContentSignerBuilder.class);
         when(mockSignerBuilder.build(any())).thenThrow(new OperatorCreationException("Mock failure"));
@@ -110,7 +110,7 @@ class CertificateGeneratorTest {
 
     @Test
     @DisplayName("X.509 인증서 변환 중 예외가 발생하면 CaException이 발생한다.")
-    void generateCertificate_certificateConversionFails() throws Exception {
+    void generateCertificate7() throws Exception {
         JcaX509CertificateConverter mockConverter = mock(JcaX509CertificateConverter.class);
         when(mockConverter.getCertificate(any())).thenThrow(new CertificateException("Mock failure"));
 
