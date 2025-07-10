@@ -8,6 +8,7 @@ import com.example.ca.service.command.CertificateGenerateCommand;
 import com.example.ca.service.dto.CertificateDto;
 import com.example.ca.service.dto.CertificateIssueDto;
 import com.example.ca.service.dto.CertificationAuthorityDto;
+import com.example.ca.service.dto.CertificationAuthorityTreeDto;
 import com.example.ca.service.dto.RootCertificateIssueDto;
 import com.example.ca.service.dto.SubCertificateIssueDto;
 import java.io.StringWriter;
@@ -17,6 +18,8 @@ import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.cert.X509Certificate;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter;
@@ -95,6 +98,22 @@ public class CertificateService {
                                              .stream()
                                              .map(CertificationAuthorityDto::of)
                                              .toList();
+    }
+
+    public List<CertificationAuthorityTreeDto> getCertificationAuthorityTree() {
+        List<CertificationAuthority> all = certificateAuthorityRepository.findAll();
+
+        List<CertificationAuthority> roots = all.stream()
+                                                .filter(CertificationAuthority::isRoot)
+                                                .toList();
+        Map<Long, List<CertificationAuthority>> childMap = all.stream()
+                                                              .filter(CertificationAuthority::isSub)
+                                                              .collect(Collectors.groupingBy(ca -> ca.getIssuer()
+                                                                                                     .getId()));
+
+        return roots.stream()
+                    .map(ca -> CertificationAuthorityTreeDto.from(ca, childMap))
+                    .toList();
     }
 
     private CertificateGenerateCommand createCommand(

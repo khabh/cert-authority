@@ -59,4 +59,19 @@ public class CertificationAuthority {
     public X500Name getX500Name() {
         return distinguishedName.toX500Name();
     }
+
+    public CaType getType() {
+        if (issuer == null) {
+            return CaType.ROOT;
+        }
+        return CaType.SUB;
+    }
+
+    public boolean isRoot() {
+        return getType() == CaType.ROOT;
+    }
+
+    public boolean isSub() {
+        return getType() == CaType.SUB;
+    }
 }
