@@ -1,0 +1,45 @@
+<th:block th:fragment="detail">
+  <div class="detail-container">
+    <div
+        style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:#fff; padding:24px 32px; border-radius:12px; box-shadow:0 4px 15px rgba(0,0,0,0.1); max-width:600px; margin:0 auto;">
+      <h2 style="margin-bottom:24px; color:#1565c0; font-weight:700; font-size:1.8em;">인증서 상세
+        정보</h2>
+
+      <p style="font-size:1em; color:#333; margin:12px 0;">
+        <strong
+            style="font-weight:700; color:#1565c0; min-width:140px; display:inline-block;">ID:</strong>
+        <span th:text="${ca.id}">1</span>
+      </p>
+
+      <p style="font-size:1em; color:#333; margin:12px 0;">
+        <strong style="font-weight:700; color:#1565c0; min-width:140px; display:inline-block;">Common
+          Name:</strong>
+        <span th:text="${ca.commonName}">CA Name</span>
+      </p>
+
+      <p style="font-size:1em; color:#333; margin:12px 0;">
+        <strong style="font-weight:700; color:#1565c0; min-width:140px; display:inline-block;">Distinguished
+          Name:</strong>
+        <span th:text="${ca.distinguishedName}">CN=...</span>
+      </p>
+
+      <p style="font-size:1em; color:#333; margin:12px 0;">
+        <strong style="font-weight:700; color:#1565c0;">Certificate:</strong>
+      </p>
+
+      <pre
+          style="background:#f5f7fa; border:1px solid #d6dae3; border-radius:8px; padding:16px; font-family:'Courier New', Courier, monospace; font-size:0.9em; white-space:pre-wrap; word-break:break-all; max-height:200px; overflow-y:auto; margin-top:8px;"
+          th:text="${ca.certificate}">-----BEGIN CERTIFICATE-----</pre>
+
+      <button
+          style="background:#1565c0; color:#fff; border:none; border-radius:8px; padding:12px 24px; font-size:1em; cursor:pointer; margin-right:16px; transition: background-color 0.3s ease;"
+          onclick="location.href='/issue-sub?issuerId=[[${ca.id}]]'">서브 CA 인증서 발급
+      </button>
+
+      <button
+          style="background:#1565c0; color:#fff; border:none; border-radius:8px; padding:12px 24px; font-size:1em; cursor:pointer; transition: background-color 0.3s ease;"
+          onclick="location.href='/issue-leaf?issuerId=[[${ca.id}]]'">리프 인증서 발급
+      </button>
+    </div>
+  </div>
+</th:block>

@@ -79,6 +79,10 @@ public class CertificationAuthority {
         return distinguishedName.getCommonName();
     }
 
+    public String getRawName() {
+        return distinguishedName.toRawName();
+    }
+
     public Long getIssuerId() {
         if (issuer == null) {
             return null;

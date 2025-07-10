@@ -9,6 +9,7 @@ import com.example.ca.service.dto.CertificateDto;
 import com.example.ca.service.dto.CertificateIssueDto;
 import com.example.ca.service.dto.CertificationAuthorityDto;
 import com.example.ca.service.dto.CertificationAuthorityTreeDto;
+import com.example.ca.service.dto.CertificationAuthorityViewDto;
 import com.example.ca.service.dto.RootCertificateIssueDto;
 import com.example.ca.service.dto.SubCertificateIssueDto;
 import java.io.StringWriter;
@@ -112,6 +113,12 @@ public class CertificateService {
         return rootCertificationAuthorities.stream()
                                            .map(ca -> CertificationAuthorityTreeDto.from(ca, subCertificationAuthorities))
                                            .toList();
+    }
+
+    public CertificationAuthorityViewDto getCertificationAuthority(Long id) {
+        CertificationAuthority certificationAuthority = certificateAuthorityRepository.findById(id)
+                                                                                      .orElseThrow(() -> new CaException("등록되지 않은 CA입니다."));
+        return CertificationAuthorityViewDto.of(certificationAuthority);
     }
 
     private CertificateGenerateCommand createCommand(

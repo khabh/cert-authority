@@ -5,6 +5,7 @@ import com.example.ca.service.dto.CertificateDto;
 import com.example.ca.service.dto.CertificateIssueDto;
 import com.example.ca.service.dto.CertificationAuthorityDto;
 import com.example.ca.service.dto.CertificationAuthorityTreeDto;
+import com.example.ca.service.dto.CertificationAuthorityViewDto;
 import com.example.ca.service.dto.RootCertificateIssueDto;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -12,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 
 @Controller
@@ -56,5 +58,12 @@ public class CertificateUiController {
         List<CertificationAuthorityTreeDto> tree = certificateService.getCertificationAuthorityTree();
         model.addAttribute("caTree", tree);
         return "dashboard";
+    }
+
+    @GetMapping("/ca/{id}")
+    public String viewCa(@PathVariable Long id, Model model) {
+        CertificationAuthorityViewDto certificationAuthorityViewDto = certificateService.getCertificationAuthority(id);
+        model.addAttribute("ca", certificationAuthorityViewDto);
+        return "ca";
     }
 }
