@@ -1,0 +1,44 @@
+<!-- templates/issue-certificate.html -->
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>인증서 발급</title>
+  <script src="https://unpkg.com/htmx.org@1.9.2"></script>
+</head>
+<body>
+<h1>CSR 기반 인증서 발급</h1>
+
+<form id="issue-cert-form"
+      hx-post="/certificates"
+      hx-target="#result"
+      hx-swap="innerHTML"
+      method="post">
+
+  <label>Root CA 선택:
+    <select name="certificateAuthorityId" required>
+      <option th:each="ca : ${cas}"
+              th:value="${ca.id}"
+              th:text="${ca.distinguishedName}">
+      </option>
+    </select>
+  </label>
+  <br/>
+
+  <label>유효 기간 (일):
+    <input type="number" name="validityDays" value="365" required>
+  </label>
+  <br/>
+
+  <label>CSR (PEM 형식):
+    <br/>
+    <textarea name="csr" rows="10" cols="70" required></textarea>
+  </label>
+  <br/>
+
+  <button type="submit">인증서 발급</button>
+</form>
+
+<div id="result"></div>
+
+</body>
+</html>

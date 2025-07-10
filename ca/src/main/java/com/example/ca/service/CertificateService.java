@@ -7,6 +7,7 @@ import com.example.ca.exception.CaException;
 import com.example.ca.service.command.CertificateGenerateCommand;
 import com.example.ca.service.dto.CertificateDto;
 import com.example.ca.service.dto.CertificateIssueDto;
+import com.example.ca.service.dto.CertificationAuthorityDto;
 import com.example.ca.service.dto.RootCertificateIssueDto;
 import java.security.InvalidKeyException;
 import java.security.KeyPair;
@@ -14,6 +15,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.cert.X509Certificate;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.pkcs.PKCS10CertificationRequest;
@@ -64,6 +66,13 @@ public class CertificateService {
         saveCertificateAuthority(distinguishedName, keyPair.getPrivate());
 
         return new CertificateDto(certificatePem);
+    }
+
+    public List<CertificationAuthorityDto> findAllCertificationAuthorities() {
+        return certificateAuthorityRepository.findAll()
+                                             .stream()
+                                             .map(CertificationAuthorityDto::of)
+                                             .toList();
     }
 
     private void saveCertificateAuthority(DistinguishedName distinguishedName, PrivateKey privateKey) {
