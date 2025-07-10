@@ -42,13 +42,13 @@ class CertificateGeneratorTest {
         generator = new CertificateGenerator(fixedClock, contentSignerBuilder, certificateConverter);
         keyPair = KeyPairGenerator.getInstance("RSA").generateKeyPair();
         validityDays = 365;
-        command = CertificateGenerateCommand.builder()
-                                            .issuer(new X500Name("CN=Root,O=ExampleOrg,C=KR"))
-                                            .subject(new X500Name("CN=Leaf,O=ExampleOrg,C=KR"))
-                                            .subjectPublicKey(keyPair.getPublic())
-                                            .issuerPrivateKey(keyPair.getPrivate())
-                                            .validityDays(validityDays)
-                                            .build();
+        command = new CertificateGenerateCommand(
+            new X500Name("CN=Root,O=ExampleOrg,C=KR"),
+            new X500Name("CN=Leaf,O=ExampleOrg,C=KR"),
+            keyPair.getPublic(),
+            keyPair.getPrivate(),
+            validityDays
+        );
     }
 
     @Test

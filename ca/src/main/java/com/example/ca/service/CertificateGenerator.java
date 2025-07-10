@@ -32,19 +32,19 @@ public class CertificateGenerator {
     public X509Certificate generateCertificate(CertificateGenerateCommand command) {
         Instant now = Instant.now(clock);
         Date notBefore = Date.from(now);
-        Date notAfter = Date.from(now.plus(command.getValidityDays(), ChronoUnit.DAYS));
+        Date notAfter = Date.from(now.plus(command.validityDays(), ChronoUnit.DAYS));
         BigInteger serial = new BigInteger(64, new SecureRandom());
 
         X509v3CertificateBuilder certBuilder = new JcaX509v3CertificateBuilder(
-            command.getIssuer(),
+            command.issuer(),
             serial,
             notBefore,
             notAfter,
-            command.getSubject(),
-            command.getSubjectPublicKey()
+            command.subject(),
+            command.subjectPublicKey()
         );
 
-        ContentSigner signer = createSigner(command.getIssuerPrivateKey());
+        ContentSigner signer = createSigner(command.issuerPrivateKey());
         X509CertificateHolder certHolder = certBuilder.build(signer);
 
         return generateCertificate(certHolder);

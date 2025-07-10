@@ -54,13 +54,7 @@ public class CertificateService {
 
         X500Name subject = distinguishedName.toX500Name();
         KeyPair keyPair = keyGenerator.generateKeyPair();
-        CertificateGenerateCommand command = CertificateGenerateCommand.builder()
-                                                                       .issuer(subject)
-                                                                       .subject(subject)
-                                                                       .issuerPrivateKey(keyPair.getPrivate())
-                                                                       .subjectPublicKey(keyPair.getPublic())
-                                                                       .validityDays(365)
-                                                                       .build();
+        CertificateGenerateCommand command = CertificateGenerateCommand.ofSelfSign(subject, keyPair, 365);
         X509Certificate certificate = certificateGenerator.generateCertificate(command);
         String certificatePem = toPem(certificate);
 
@@ -93,13 +87,13 @@ public class CertificateService {
             throw new CaException("공개키 파싱에 실패했습니다.");
         }
 
-        return CertificateGenerateCommand.builder()
-                                         .issuer(ca.getX500Name())
-                                         .subject(csr.getSubject())
-                                         .subjectPublicKey(subjectKey)
-                                         .issuerPrivateKey(privateKeyParser.parsePrivateKey(ca.getSecretKey()))
-                                         .validityDays(certificateIssueDto.validityDays())
-                                         .build();
+        return new CertificateGenerateCommand(
+            ca.getX500Name(),
+            csr.getSubject(),
+            subjectKey,
+            privateKeyParser.parsePrivateKey(ca.getSecretKey()),
+            certificateIssueDto.validityDays()
+        );
     }
 
     private void validateRootCaUnique(DistinguishedName distinguishedName) {
