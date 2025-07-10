@@ -2,6 +2,7 @@ package com.example.ca.controller;
 
 import com.example.ca.service.CertificateService;
 import com.example.ca.service.dto.CertificateDto;
+import com.example.ca.service.dto.CertificateIssueDto;
 import com.example.ca.service.dto.RootCertificateIssueDto;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -20,5 +21,10 @@ public class CertificateController {
     @PostMapping("/certificates/root")
     public CertificateDto issueRootCertificate(@Valid @RequestBody RootCertificateIssueDto rootCertificateIssueDto) {
         return certificateService.issueRootCertificate(rootCertificateIssueDto);
+    }
+
+    @PostMapping("/certificates")
+    public CertificateDto issueCertificate(@Valid @RequestBody CertificateIssueDto certificateIssueDto) {
+        return certificateService.issueCertificate(certificateIssueDto);
     }
 }

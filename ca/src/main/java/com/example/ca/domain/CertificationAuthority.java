@@ -13,6 +13,7 @@ import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.bouncycastle.asn1.x500.X500Name;
 
 @Entity
 @Getter
@@ -35,5 +36,9 @@ public class CertificationAuthority {
 
     public CertificationAuthority(DistinguishedName distinguishedName, String secretKey) {
         this(null, distinguishedName, secretKey);
+    }
+
+    public X500Name getX500Name() {
+        return distinguishedName.toX500Name();
     }
 }
