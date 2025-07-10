@@ -33,4 +33,9 @@ public class CertificateController {
     public CertificateDto issueSubCertificate(@Valid @RequestBody SubCertificateIssueDto subCertificateIssueDto) {
         return certificateService.issueSubCertificate(subCertificateIssueDto);
     }
+
+    @PostMapping("/certificates/leaf")
+    public CertificateDto issueLeafCertificate(@Valid @RequestBody CertificateIssueDto certificateIssueDto) {
+        return certificateService.issueCertificate(certificateIssueDto);
+    }
 }
