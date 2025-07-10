@@ -41,13 +41,6 @@ public class CertificateUiController {
         return "issue-certificate";
     }
 
-    @PostMapping("/certificates")
-    public String issueLeafCert(@Valid CertificateIssueDto dto, Model model) {
-        CertificateDto certificateDto = certificateService.issueCertificate(dto);
-        model.addAttribute("certificate", certificateDto.certificate());
-        return "fragments/certificate :: result";
-    }
-
     @PostMapping("/certificates/root")
     public String issueRootCaCert(@Valid RootCertificateIssueDto dto, Model model) {
         CertificateDto certificateDto = certificateService.issueRootCertificate(dto);
@@ -80,5 +73,18 @@ public class CertificateUiController {
     public String showSubCaForm(@RequestParam("issuerId") Long issuerId, Model model) {
         model.addAttribute("issuerId", issuerId);
         return "sub-ca";
+    }
+
+    @GetMapping("/certificates/leaf/create")
+    public String showLeafCaForm(@RequestParam("issuerId") Long issuerId, Model model) {
+        model.addAttribute("issuerId", issuerId);
+        return "leaf-ca";
+    }
+
+    @PostMapping("/certificates")
+    public String issueCertificate(@Valid CertificateIssueDto certificateIssueDto, Model model) {
+        CertificateDto certificateDto = certificateService.issueCertificate(certificateIssueDto);
+        model.addAttribute("certificate", certificateDto.certificate());
+        return "fragments/certificate :: result";
     }
 }

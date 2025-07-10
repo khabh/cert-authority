@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Sub Certificate 발급</title>
+  <title>Leaf Certificate 발급</title>
   <script src="https://unpkg.com/htmx.org@1.9.2"></script>
   <style>
     body {
@@ -67,17 +67,16 @@
     #result {
       margin-top: 24px;
     }
-
   </style>
 </head>
 <body>
 <div th:replace="fragments/nav :: navigation"></div>
 <div class="con">
   <div class="form-container">
-    <h1>Sub CA 인증서 발급</h1>
+    <h1>Leaf CA 인증서 발급</h1>
 
-    <form id="sub-ca-form"
-          hx-post="/certificates/sub"
+    <form id="leaf-ca-form"
+          hx-post="/certificates"
           hx-target="#result"
           hx-swap="innerHTML"
           hx-trigger="submit"
@@ -86,26 +85,18 @@
       <label>Issuer CA ID:
         <input type="text" th:value="${issuerId}" disabled>
       </label>
+      <input type="hidden" name="certificateAuthorityId" th:value="${issuerId}"/>
 
-      <input type="hidden" name="caId" th:value="${issuerId}"/>
-      <label>Common Name (CN):
-        <input type="text" name="commonName" required>
+      <label>유효 기간 (일):
+        <input type="number" name="validityDays" value="365" required>
       </label>
-      <label>Organization (O):
-        <input type="text" name="organizationName">
+      <br/>
+
+      <label>CSR (PEM 형식):
+        <br/>
+        <textarea name="csr" rows="10" cols="70" required></textarea>
       </label>
-      <label>Org Unit (OU):
-        <input type="text" name="organizationalUnit">
-      </label>
-      <label>Locality (L):
-        <input type="text" name="localityName">
-      </label>
-      <label>State (ST):
-        <input type="text" name="stateOrProvinceName">
-      </label>
-      <label>Country (C):
-        <input type="text" name="countryName" required>
-      </label>
+      <br/>
       <button type="submit">발급하기</button>
     </form>
 
