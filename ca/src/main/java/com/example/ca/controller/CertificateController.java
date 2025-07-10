@@ -4,6 +4,7 @@ import com.example.ca.service.CertificateService;
 import com.example.ca.service.dto.CertificateDto;
 import com.example.ca.service.dto.CertificateIssueDto;
 import com.example.ca.service.dto.RootCertificateIssueDto;
+import com.example.ca.service.dto.SubCertificateIssueDto;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -26,5 +27,10 @@ public class CertificateController {
     @PostMapping("/certificates")
     public CertificateDto issueCertificate(@Valid @RequestBody CertificateIssueDto certificateIssueDto) {
         return certificateService.issueCertificate(certificateIssueDto);
+    }
+
+    @PostMapping("/certificates/sub")
+    public CertificateDto issueSubCertificate(@Valid @RequestBody SubCertificateIssueDto subCertificateIssueDto) {
+        return certificateService.issueSubCertificate(subCertificateIssueDto);
     }
 }

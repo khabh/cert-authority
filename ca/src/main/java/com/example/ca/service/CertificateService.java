@@ -9,11 +9,11 @@ import com.example.ca.service.dto.CertificateDto;
 import com.example.ca.service.dto.CertificateIssueDto;
 import com.example.ca.service.dto.CertificationAuthorityDto;
 import com.example.ca.service.dto.RootCertificateIssueDto;
+import com.example.ca.service.dto.SubCertificateIssueDto;
 import java.io.StringWriter;
 import java.security.InvalidKeyException;
 import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
-import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.cert.X509Certificate;
 import java.util.List;
@@ -37,6 +37,31 @@ public class CertificateService {
     private final CertificateAuthorityRepository certificateAuthorityRepository;
 
     @Transactional
+    public CertificateDto issueSubCertificate(SubCertificateIssueDto subCertificateIssueDto) {
+        DistinguishedName subjectDn = dtoToDistinguishedName(subCertificateIssueDto);
+        validateCaUnique(subjectDn);
+        CertificationAuthority ca = findCertificationAuthority(subCertificateIssueDto.caId());
+
+        KeyPair keyPair = keyGenerator.generateKeyPair();
+        CertificateGenerateCommand command = new CertificateGenerateCommand(
+            ca.getX500Name(),
+            subjectDn.toX500Name(),
+            keyPair.getPublic(),
+            privateKeyParser.parsePrivateKey(ca.getSecretKey()),
+            365
+        );
+
+        X509Certificate certificate = certificateGenerator.generateCertificate(command);
+        String certificatePem = toPem(certificate);
+
+        String secretKey = toPem(keyPair.getPrivate());
+        CertificationAuthority certificationAuthority = new CertificationAuthority(subjectDn, secretKey, ca, certificatePem);
+        certificateAuthorityRepository.save(certificationAuthority);
+
+        return new CertificateDto(certificatePem);
+    }
+
+    @Transactional
     public CertificateDto issueCertificate(CertificateIssueDto certificateIssueDto) {
         PKCS10CertificationRequest csr = csrProcessor.parseValidCsr(certificateIssueDto.csr());
         CertificationAuthority ca = findCertificationAuthority(certificateIssueDto.certificateAuthorityId());
@@ -50,7 +75,7 @@ public class CertificateService {
     @Transactional
     public CertificateDto issueRootCertificate(RootCertificateIssueDto rootCertificateIssueDto) {
         DistinguishedName distinguishedName = dtoToDistinguishedName(rootCertificateIssueDto);
-        validateRootCaUnique(distinguishedName);
+        validateCaUnique(distinguishedName);
 
         X500Name subject = distinguishedName.toX500Name();
         KeyPair keyPair = keyGenerator.generateKeyPair();
@@ -58,7 +83,9 @@ public class CertificateService {
         X509Certificate certificate = certificateGenerator.generateCertificate(command);
         String certificatePem = toPem(certificate);
 
-        saveCertificateAuthority(distinguishedName, keyPair.getPrivate());
+        String secretKey = toPem(keyPair.getPrivate());
+        CertificationAuthority certificationAuthority = new CertificationAuthority(distinguishedName, secretKey, certificatePem);
+        certificateAuthorityRepository.save(certificationAuthority);
 
         return new CertificateDto(certificatePem);
     }
@@ -68,12 +95,6 @@ public class CertificateService {
                                              .stream()
                                              .map(CertificationAuthorityDto::of)
                                              .toList();
-    }
-
-    private void saveCertificateAuthority(DistinguishedName distinguishedName, PrivateKey privateKey) {
-        String secretKey = toPem(privateKey);
-        CertificationAuthority certificationAuthority = new CertificationAuthority(distinguishedName, secretKey);
-        certificateAuthorityRepository.save(certificationAuthority);
     }
 
     private CertificateGenerateCommand createCommand(
@@ -96,9 +117,9 @@ public class CertificateService {
         );
     }
 
-    private void validateRootCaUnique(DistinguishedName distinguishedName) {
+    private void validateCaUnique(DistinguishedName distinguishedName) {
         if (certificateAuthorityRepository.existsByDistinguishedName(distinguishedName)) {
-            throw new CaException("해당 DN으로 등록된 root CA가 존재합니다.");
+            throw new CaException("해당 DN으로 등록된 CA가 존재합니다.");
         }
     }
 
@@ -115,6 +136,17 @@ public class CertificateService {
                                 .localityName(rootCertificateIssueDto.localityName())
                                 .stateOrProvinceName(rootCertificateIssueDto.stateOrProvinceName())
                                 .countryName(rootCertificateIssueDto.countryName())
+                                .build();
+    }
+
+    private DistinguishedName dtoToDistinguishedName(SubCertificateIssueDto subCertificateIssueDto) {
+        return DistinguishedName.builder()
+                                .commonName(subCertificateIssueDto.commonName())
+                                .organizationName(subCertificateIssueDto.organizationName())
+                                .organizationalUnitName(subCertificateIssueDto.organizationalUnit())
+                                .localityName(subCertificateIssueDto.localityName())
+                                .stateOrProvinceName(subCertificateIssueDto.stateOrProvinceName())
+                                .countryName(subCertificateIssueDto.countryName())
                                 .build();
     }
 

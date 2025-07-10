@@ -43,7 +43,7 @@ class CertificateServiceTest {
                                                 .commonName("Test CN")
                                                 .countryName("KR")
                                                 .build();
-        CertificationAuthority ca = new CertificationAuthority(dn, "dummyPrivateKey");
+        CertificationAuthority ca = new CertificationAuthority(dn, "dummyPrivateKey", "dummyCertificate");
         certificateAuthorityRepository.save(ca);
         RootCertificateIssueDto dto = new RootCertificateIssueDto(
             "Test CN", null, null, null, null, "KR"
@@ -51,7 +51,7 @@ class CertificateServiceTest {
 
         assertThatThrownBy(() -> certificateService.issueRootCertificate(dto))
             .isInstanceOf(CaException.class)
-            .hasMessageContaining("해당 DN으로 등록된 root CA가 존재합니다.");
+            .hasMessageContaining("해당 DN으로 등록된 CA가 존재합니다.");
     }
 
     @Test

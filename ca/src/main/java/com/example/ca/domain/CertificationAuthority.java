@@ -4,9 +4,12 @@ import com.example.ca.domain.converter.DistinguishedNameConverter;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.AccessLevel;
@@ -34,8 +37,23 @@ public class CertificationAuthority {
     @Column(name = "sk", nullable = false, length = 4000)
     private String secretKey;
 
-    public CertificationAuthority(DistinguishedName distinguishedName, String secretKey) {
-        this(null, distinguishedName, secretKey);
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "issuer_id")
+    private CertificationAuthority issuer;
+
+    @Column(name = "certificate", nullable = false, length = 4000)
+    private String certificate;
+
+    public CertificationAuthority(DistinguishedName distinguishedName, String secretKey, String certificate) {
+        this(null, distinguishedName, secretKey, null, certificate);
+    }
+
+    public CertificationAuthority(
+        DistinguishedName distinguishedName,
+        String secretKey,
+        CertificationAuthority issuer,
+        String certificate) {
+        this(null, distinguishedName, secretKey, issuer, certificate);
     }
 
     public X500Name getX500Name() {
