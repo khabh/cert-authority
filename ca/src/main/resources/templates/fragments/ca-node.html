@@ -1,14 +1,19 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-
 <body>
 <th:block th:fragment="renderNode(children)">
   <ul th:if="${children != null and !children.isEmpty()}">
     <li th:each="child : ${children}">
-      <div class="ca-node">
+      <div class="ca-node"
+           th:attr="hx-get=@{/ca/{id}(id=${child.id})}"
+           hx-target="#ca-modal-content"
+           hx-swap="innerHTML"
+           hx-trigger="click"
+           onclick="openModal()"
+           style="cursor: pointer;">
         <span class="toggle-btn"
               th:if="${child.children != null and !child.children.isEmpty()}"
-              onclick="toggleChildren(this)">▶
+              onclick="event.stopPropagation(); toggleChildren(this)">▶
         </span>
         <strong th:text="${child.commonName}">Child Name</strong>
         <span class="type" th:text="${child.type}">Type</span>

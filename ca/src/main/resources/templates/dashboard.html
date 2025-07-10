@@ -67,13 +67,55 @@
     .hidden {
       display: none;
     }
+
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.4);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
+
+    .modal.hidden {
+      display: none;
+    }
+
+    .modal-content {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      max-width: 600px;
+      width: 90%;
+      position: relative;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .close-btn {
+      position: absolute;
+      top: 10px;
+      right: 16px;
+      font-size: 24px;
+      cursor: pointer;
+    }
   </style>
+  <script src="https://unpkg.com/htmx.org@1.9.2"></script>
 </head>
 <body>
 <h1>Certification Authority Tree</h1>
 
 <div th:replace="~{fragments/ca-node :: renderNode(${caTree})}"></div>
-
+<div id="ca-modal" class="modal hidden">
+  <div class="modal-content">
+    <span class="close-btn" onclick="closeModal()">&times;</span>
+    <div id="ca-modal-content">
+    </div>
+  </div>
+</div>
 <script>
   function toggleChildren(button) {
     const parent = button.closest('li');
@@ -97,7 +139,20 @@
       btn.textContent = '▶';
     });
   });
-</script>
 
+  function openModal() {
+    document.getElementById('ca-modal').classList.remove('hidden');
+  }
+
+  function closeModal() {
+    document.getElementById('ca-modal').classList.add('hidden');
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeModal();
+    }
+  });
+</script>
 </body>
 </html>
