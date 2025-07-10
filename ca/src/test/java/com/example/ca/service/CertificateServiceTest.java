@@ -8,19 +8,21 @@ import com.example.ca.domain.DistinguishedName;
 import com.example.ca.domain.repository.CertificateAuthorityRepository;
 import com.example.ca.exception.CaException;
 import com.example.ca.service.dto.CertificateDto;
+import com.example.ca.service.dto.CertificateIssueDto;
 import com.example.ca.service.dto.RootCertificateIssueDto;
-import java.io.ByteArrayInputStream;
-import java.security.cert.CertificateFactory;
+import com.example.ca.testutil.CsrTestUtil;
+import com.example.ca.testutil.GeneratedCsr;
+import com.example.ca.testutil.PemUtils;
 import java.security.cert.X509Certificate;
-import java.util.Base64;
 import java.util.Date;
+import org.bouncycastle.asn1.x500.X500Name;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 class CertificateServiceTest {
 
     @Autowired
@@ -41,10 +43,8 @@ class CertificateServiceTest {
                                                 .commonName("Test CN")
                                                 .countryName("KR")
                                                 .build();
-
         CertificationAuthority ca = new CertificationAuthority(dn, "dummyPrivateKey");
         certificateAuthorityRepository.save(ca);
-
         RootCertificateIssueDto dto = new RootCertificateIssueDto(
             "Test CN", null, null, null, null, "KR"
         );
@@ -55,38 +55,15 @@ class CertificateServiceTest {
     }
 
     @Test
-    @DisplayName("새로운 DN으로 root CA 발급 성공")
+    @DisplayName("발급된 인증서의 subject와 issuer가 요청한 DN과 일치해야 한다.")
     void issueRootCertificate2() {
-        RootCertificateIssueDto dto = new RootCertificateIssueDto(
-            "Unique CN", null, null, null, null, "KR"
-        );
-
-        CertificateDto certDto = certificateService.issueRootCertificate(dto);
-
-        assertThat(certDto).isNotNull();
-        assertThat(certDto.certificate()).contains("-----BEGIN CERTIFICATE-----");
-    }
-
-    @Test
-    @DisplayName("발급된 인증서의 subject와 issuer가 요청한 DN과 일치해야 한다")
-    void issueRootCertificate3() throws Exception {
         RootCertificateIssueDto dto = new RootCertificateIssueDto(
             "Test CN", "Example Org", "IT Dept", "Seoul", "Seoul", "KR"
         );
 
         CertificateDto result = certificateService.issueRootCertificate(dto);
 
-        String pem = result.certificate();
-        CertificateFactory certFactory = CertificateFactory.getInstance("X.509");
-        ByteArrayInputStream pemStream = new ByteArrayInputStream(
-            Base64.getDecoder().decode(pem
-                .replace("-----BEGIN CERTIFICATE-----", "")
-                .replace("-----END CERTIFICATE-----", "")
-                .replaceAll("\\s", "")
-            )
-        );
-        X509Certificate cert = (X509Certificate) certFactory.generateCertificate(pemStream);
-
+        X509Certificate cert = PemUtils.parseCertificateFromPem(result.certificate());
         assertThat(cert.getSubjectX500Principal().getName())
             .contains("CN=Test CN")
             .contains("O=Example Org")
@@ -94,11 +71,36 @@ class CertificateServiceTest {
             .contains("L=Seoul")
             .contains("ST=Seoul")
             .contains("C=KR");
-
         assertThat(cert.getIssuerX500Principal().getName())
             .isEqualTo(cert.getSubjectX500Principal().getName());
-
         assertThat(cert.getNotBefore()).isBeforeOrEqualTo(new Date());
         assertThat(cert.getNotAfter()).isAfter(cert.getNotBefore());
+    }
+
+    @Test
+    @DisplayName("CSR을 기반으로 인증서를 발급할 수 있다.")
+    void issueRootCertificate3() {
+        RootCertificateIssueDto rootDto = new RootCertificateIssueDto("CA Root", "AutoCrypt", "IT", "Seoul", "Seoul", "KR");
+        certificateService.issueRootCertificate(rootDto);
+        CertificationAuthority certificationAuthority = certificateAuthorityRepository.findAll().getFirst();
+        X500Name issuerX500Name = certificationAuthority.getX500Name();
+        Long certificationAuthorityId = certificationAuthority.getId();
+        String subjectDn = "CN=LeafCert, OU=Dev, O=AutoCrypt, L=Seoul, ST=Seoul, C=KR";
+        GeneratedCsr generatedCsr = CsrTestUtil.generateCsr(subjectDn);
+
+        CertificateDto issued = certificateService.issueCertificate(
+            new CertificateIssueDto(
+                certificationAuthorityId,
+                365,
+                generatedCsr.csrPem()
+            )
+        );
+
+        X509Certificate cert = PemUtils.parseCertificateFromPem(issued.certificate());
+        X500Name actualSubject = new X500Name(cert.getSubjectX500Principal().getName());
+        assertThat(actualSubject).isEqualTo(new X500Name(subjectDn));
+
+        X500Name actualIssuer = new X500Name(cert.getIssuerX500Principal().getName());
+        assertThat(actualIssuer).isEqualTo(issuerX500Name);
     }
 }
