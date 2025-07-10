@@ -19,7 +19,6 @@ import org.bouncycastle.asn1.x500.X500NameBuilder;
 import org.bouncycastle.asn1.x500.style.BCStyle;
 
 @Getter
-@Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class DistinguishedName {
 
@@ -38,6 +37,7 @@ public class DistinguishedName {
 
     private String countryName;
 
+    @Builder
     public DistinguishedName(
         String commonName,
         String organizationName,
@@ -101,7 +101,6 @@ public class DistinguishedName {
 
         return builder.build();
     }
-
 
     private Optional<Map.Entry<ASN1ObjectIdentifier, String>> rdnIfNotBlank(ASN1ObjectIdentifier key, String value) {
         if (value == null || value.isBlank()) {
