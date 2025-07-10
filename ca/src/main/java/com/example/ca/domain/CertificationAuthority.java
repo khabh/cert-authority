@@ -74,4 +74,8 @@ public class CertificationAuthority {
     public boolean isSub() {
         return getType() == CaType.SUB;
     }
+
+    public String getCommonName() {
+        return distinguishedName.getCommonName();
+    }
 }

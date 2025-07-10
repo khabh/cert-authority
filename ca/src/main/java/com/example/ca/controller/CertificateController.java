@@ -3,10 +3,13 @@ package com.example.ca.controller;
 import com.example.ca.service.CertificateService;
 import com.example.ca.service.dto.CertificateDto;
 import com.example.ca.service.dto.CertificateIssueDto;
+import com.example.ca.service.dto.CertificationAuthorityTreeDto;
 import com.example.ca.service.dto.RootCertificateIssueDto;
 import com.example.ca.service.dto.SubCertificateIssueDto;
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -37,5 +40,10 @@ public class CertificateController {
     @PostMapping("/certificates/leaf")
     public CertificateDto issueLeafCertificate(@Valid @RequestBody CertificateIssueDto certificateIssueDto) {
         return certificateService.issueCertificate(certificateIssueDto);
+    }
+
+    @GetMapping("/certificates/hierarchy")
+    public List<CertificationAuthorityTreeDto> getCertificationAuthorityTree() {
+        return certificateService.getCertificationAuthorityTree();
     }
 }

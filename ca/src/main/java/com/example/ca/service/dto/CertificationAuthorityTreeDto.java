@@ -21,7 +21,7 @@ public record CertificationAuthorityTreeDto(
 
         return new CertificationAuthorityTreeDto(
             ca.getId(),
-            ca.getDistinguishedName().getCommonName(),
+            ca.getCommonName(),
             ca.getType(),
             children.stream()
                     .map(child -> CertificationAuthorityTreeDto.from(child, childMap))
