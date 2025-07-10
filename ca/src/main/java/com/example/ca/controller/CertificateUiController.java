@@ -19,6 +19,11 @@ public class CertificateUiController {
 
     private final CertificateService certificateService;
 
+    @GetMapping("/")
+    public String redirectToRootCa() {
+        return "redirect:/certificates/root/create";
+    }
+
     @GetMapping("/certificates/root/create")
     public String showRootCaForm() {
         return "root-ca";
