@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Root Certificate 발급</title>
+  <script src="https://unpkg.com/htmx.org@1.9.2"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f9fafb;
+      color: #333;
+      margin: 0;
+    }
+
+    .con {
+      padding-left: 240px;
+      padding-top: 40px;
+    }
+
+    .form-container {
+      background: #fff;
+      padding: 24px 32px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .form-container h1 {
+      margin-bottom: 24px;
+      color: #1565c0;
+      font-weight: 700;
+      font-size: 1.8em;
+    }
+
+    .form-container label {
+      display: block;
+      margin-bottom: 16px;
+      font-size: 1em;
+    }
+
+    .form-container input[type="text"] {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      margin-top: 6px;
+      font-size: 1em;
+      box-sizing: border-box;
+    }
+
+    .form-container button[type="submit"] {
+      background: #1565c0;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 24px;
+      font-size: 1em;
+      cursor: pointer;
+      margin-top: 16px;
+      transition: background-color 0.3s ease;
+    }
+
+    .form-container button[type="submit"]:hover {
+      background: #0d3b70;
+    }
+
+    #result {
+      margin-top: 24px;
+    }
+
+  </style>
+</head>
+<body>
+<div th:replace="fragments/nav :: navigation"></div>
+<div class="con">
+  <div class="form-container">
+    <h1>Sub CA 인증서 발급</h1>
+
+    <form id="sub-ca-form"
+          hx-post="/certificates/sub"
+          hx-target="#result"
+          hx-swap="innerHTML"
+          hx-trigger="submit"
+          method="post">
+
+      <label>Issuer CA ID:
+        <input type="text" th:value="${issuerId}" disabled>
+      </label>
+
+      <input type="hidden" name="caId" th:value="${issuerId}"/>
+      <label>Common Name (CN):
+        <input type="text" name="commonName" required>
+      </label>
+      <label>Organization (O):
+        <input type="text" name="organizationName">
+      </label>
+      <label>Org Unit (OU):
+        <input type="text" name="organizationalUnit">
+      </label>
+      <label>Locality (L):
+        <input type="text" name="localityName">
+      </label>
+      <label>State (ST):
+        <input type="text" name="stateOrProvinceName">
+      </label>
+      <label>Country (C):
+        <input type="text" name="countryName" required>
+      </label>
+      <button type="submit">발급하기</button>
+    </form>
+
+    <div id="result"></div>
+  </div>
+</div>
+</body>
+</html>
