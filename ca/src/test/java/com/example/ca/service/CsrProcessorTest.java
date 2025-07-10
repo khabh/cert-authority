@@ -6,8 +6,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.example.ca.exception.CaException;
 import com.example.ca.testutil.CsrTestUtil;
 import com.example.ca.testutil.GeneratedCsr;
+import com.example.ca.testutil.KeyPairFactory;
 import java.security.KeyPair;
-import java.security.KeyPairGenerator;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.operator.jcajce.JcaContentVerifierProviderBuilder;
@@ -44,11 +44,9 @@ public class CsrProcessorTest {
 
     @Test
     @DisplayName("CSR의 공개키와 서명자가 다르면 유효성 검증에 실패한다.")
-    void parseValidCsr3() throws Exception {
-        KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
-        keyGen.initialize(2048);
-        KeyPair keyPairA = keyGen.generateKeyPair();
-        KeyPair keyPairB = keyGen.generateKeyPair();
+    void parseValidCsr3() {
+        KeyPair keyPairA = KeyPairFactory.generate();
+        KeyPair keyPairB = KeyPairFactory.generate();
         String dn = "CN=juha, OU=IT, O=organization, L=Gangnam-gu, ST=Seoul, C=KR";
 
         GeneratedCsr invalidCsr = CsrTestUtil.generateCsr(dn, keyPairA.getPrivate(), keyPairB.getPublic());

@@ -3,8 +3,6 @@ package com.example.ca.testutil;
 
 import java.io.StringWriter;
 import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import org.bouncycastle.asn1.x500.X500Name;
@@ -18,19 +16,8 @@ import org.bouncycastle.pkcs.PKCS10CertificationRequestBuilder;
 
 public class CsrTestUtil {
 
-    static KeyPairGenerator keyGen;
-
-    static {
-        try {
-            keyGen = KeyPairGenerator.getInstance("RSA");
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
-        }
-        keyGen.initialize(2048);
-    }
-
     public static GeneratedCsr generateCsr(String dn) {
-        KeyPair keyPair = keyGen.generateKeyPair();
+        KeyPair keyPair = KeyPairFactory.generate();
         return generateCsr(dn, keyPair.getPrivate(), keyPair.getPublic());
     }
 
