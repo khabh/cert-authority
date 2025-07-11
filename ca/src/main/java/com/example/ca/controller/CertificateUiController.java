@@ -8,10 +8,9 @@ import com.example.ca.service.dto.CertificationAuthorityViewDto;
 import com.example.ca.service.dto.RootCertificateIssueDto;
 import com.example.ca.service.dto.RootCertificationAuthorityEnrollDto;
 import com.example.ca.service.dto.SubCertificateIssueDto;
+import com.example.ca.util.FileContentExtractor;
+import com.example.ca.util.StringUtil;
 import jakarta.validation.Valid;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
@@ -86,7 +85,7 @@ public class CertificateUiController {
     }
 
     @GetMapping("/certificates/root/register")
-    public String showRegisterForm(Model model) {
+    public String showRegisterForm() {
         return "root-ca-register";
     }
 
@@ -97,45 +96,23 @@ public class CertificateUiController {
         @RequestParam(required = false) MultipartFile certificateFile,
         @RequestParam(required = false) MultipartFile privateKeyFile
     ) {
-        if ((isEmpty(certificateText) && (certificateFile == null || certificateFile.isEmpty()))
-            || (isEmpty(privateKeyText) && (privateKeyFile == null || privateKeyFile.isEmpty()))) {
-            throw new RuntimeException("올바르지 않은 입력입니다.");
-        }
-        if (certificateText.isEmpty()) {
+        String certificate = resolveInput("인증서", certificateText, certificateFile);
+        String privateKey = resolveInput("개인키", privateKeyText, privateKeyFile);
 
-            certificateText = multipartFileToString(certificateFile);
-        }
-        if (privateKeyText.isEmpty()) {
-            privateKeyText = multipartFileToString(privateKeyFile);
-        }
-
-        Long certificateId = certificateService.enrollRootCertificationAuthority(new RootCertificationAuthorityEnrollDto(certificateText, privateKeyText));
+        Long certificateId = certificateService.enrollRootCertificationAuthority(
+            new RootCertificationAuthorityEnrollDto(certificate, privateKey)
+        );
 
         return "redirect:/ca/" + certificateId;
     }
 
-    private boolean isEmpty(String s) {
-        return s == null || s.isBlank();
-    }
-
-    private String multipartFileToString(MultipartFile file) {
-        if (file == null || file.isEmpty()) {
-            return null;
+    private String resolveInput(String name, String text, MultipartFile file) {
+        if (!StringUtil.isEmpty(text)) {
+            return text;
         }
-        try {
-            byte[] bytes = file.getBytes();
-
-            String originalFilename = file.getOriginalFilename();
-            if (originalFilename != null) {
-                String lowerName = originalFilename.toLowerCase();
-                if (lowerName.endsWith(".der") || lowerName.endsWith(".cer")) {
-                    return Base64.getEncoder().encodeToString(bytes);
-                }
-            }
-            return new String(bytes, StandardCharsets.UTF_8);
-
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        if (file != null && !file.isEmpty()) {
+            return FileContentExtractor.extractContent(file);
         }
+        throw new IllegalArgumentException(name + " 입력이 필요합니다.");
     }
 }
