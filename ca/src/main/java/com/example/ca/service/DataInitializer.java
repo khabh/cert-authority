@@ -30,26 +30,26 @@ class DataInitializer implements ApplicationRunner {
                  ))
                  .forEach(certificateService::issueRootCertificate);
         LongStream.range(2, 4)
-                .mapToObj(number -> new SubCertificateIssueDto(
-                        number,
-                        "second" + number,
-                        "organization" + number,
-                        "unit" + number,
-                        "Seoul",
-                        "Gang",
-                        "KR"
-                ))
-                .forEach(certificateService::issueSubCertificate);
-        LongStream.range(4, 7)
-                .mapToObj(number -> new SubCertificateIssueDto(
-                        number,
-                        "third" + number,
-                        "organization" + number,
-                        "unit" + number,
-                        "Seoul",
-                        "Gang",
-                        "KR"
-                ))
-                .forEach(certificateService::issueSubCertificate);
+                  .mapToObj(number -> new SubCertificateIssueDto(
+                      number,
+                      "second" + number,
+                      "organization" + number,
+                      "unit" + number,
+                      "Seoul",
+                      "Gang",
+                      "KR"
+                  ))
+                  .forEach(certificateService::issueSubCertificate);
+        LongStream.range(4, 6)
+                  .mapToObj(number -> new SubCertificateIssueDto(
+                      number,
+                      "third" + number,
+                      "organization" + number,
+                      "unit" + number,
+                      "Seoul",
+                      "Gang",
+                      "KR"
+                  ))
+                  .forEach(certificateService::issueSubCertificate);
     }
 }
