@@ -7,16 +7,21 @@ import com.example.ca.exception.CaException;
 import com.example.ca.service.command.CertificateGenerateCommand;
 import com.example.ca.service.dto.CertificateDto;
 import com.example.ca.service.dto.CertificateIssueDto;
-import com.example.ca.service.dto.CertificationAuthorityDto;
 import com.example.ca.service.dto.CertificationAuthorityTreeDto;
 import com.example.ca.service.dto.CertificationAuthorityViewDto;
 import com.example.ca.service.dto.RootCertificateIssueDto;
+import com.example.ca.service.dto.RootCertificationAuthorityEnrollDto;
 import com.example.ca.service.dto.SubCertificateIssueDto;
+import java.io.ByteArrayInputStream;
 import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.Signature;
+import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +31,7 @@ import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter;
 import org.bouncycastle.pkcs.PKCS10CertificationRequest;
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest;
+import org.bouncycastle.util.encoders.Base64;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -94,13 +100,6 @@ public class CertificateService {
         return new CertificateDto(certificatePem);
     }
 
-    public List<CertificationAuthorityDto> findAllCertificationAuthorities() {
-        return certificateAuthorityRepository.findAll()
-                                             .stream()
-                                             .map(CertificationAuthorityDto::of)
-                                             .toList();
-    }
-
     public List<CertificationAuthorityTreeDto> getCertificationAuthorityTree() {
         List<CertificationAuthority> certificationAuthorities = certificateAuthorityRepository.findAll();
         List<CertificationAuthority> rootCertificationAuthorities = certificationAuthorities.stream()
@@ -115,10 +114,86 @@ public class CertificateService {
                                            .toList();
     }
 
+    @Transactional
+    public Long enrollRootCertificationAuthority(RootCertificationAuthorityEnrollDto dto) {
+        X509Certificate certificate = toCertificate(dto.certificate());
+        PrivateKey privateKey = privateKeyParser.parsePrivateKey(dto.privateKey());
+        validateRootCertificationAuthority(certificate, privateKey);
+        DistinguishedName distinguishedName = DistinguishedName.from(certificate.getIssuerX500Principal().getName());
+        validateCaUnique(distinguishedName);
+        CertificationAuthority certificationAuthority = new CertificationAuthority(distinguishedName, toPem(privateKey), toPem(certificate));
+
+        return certificateAuthorityRepository.save(certificationAuthority).getId();
+    }
+
     public CertificationAuthorityViewDto getCertificationAuthority(Long id) {
         CertificationAuthority certificationAuthority = certificateAuthorityRepository.findById(id)
                                                                                       .orElseThrow(() -> new CaException("등록되지 않은 CA입니다."));
         return CertificationAuthorityViewDto.of(certificationAuthority);
+    }
+
+    private void validateRootCertificationAuthority(X509Certificate certificate, PrivateKey privateKey) {
+        try {
+            certificate.verify(certificate.getPublicKey());
+            boolean isSelfIssued = certificate.getSubjectX500Principal().equals(certificate.getIssuerX500Principal());
+            if (!isSelfIssued) {
+                throw new CaException("셀프 사인 인증서가 아닙니다.");
+            }
+            certificate.checkValidity();
+            validateIsPair(certificate.getPublicKey(), privateKey);
+        } catch (CaException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new CaException("유효하지 않은 인증서입니다.");
+        }
+    }
+
+    private void validateIsPair(PublicKey publicKey, PrivateKey privateKey) {
+        try {
+            byte[] testData = "test".getBytes(StandardCharsets.UTF_8);
+
+            String algorithm = getSignatureAlgorithm(publicKey.getAlgorithm());
+
+            Signature signature = Signature.getInstance(algorithm);
+            signature.initSign(privateKey);
+            signature.update(testData);
+            byte[] signBytes = signature.sign();
+
+            Signature verifier = Signature.getInstance(algorithm);
+            verifier.initVerify(publicKey);
+            verifier.update(testData);
+
+            if (!verifier.verify(signBytes)) {
+                throw new CaException("올바르지 않은 개인키입니다.");
+            }
+        } catch (Exception e) {
+            throw new CaException("개인키 검증에 실패했습니다.");
+        }
+    }
+
+    private String getSignatureAlgorithm(String keyAlgorithm) {
+        return switch (keyAlgorithm) {
+            case "RSA" -> "SHA256withRSA";
+            case "DSA" -> "SHA256withDSA";
+            case "EC", "ECDSA" -> "SHA256withECDSA";
+            default -> throw new IllegalArgumentException("Unsupported key algorithm: " + keyAlgorithm);
+        };
+    }
+
+    private X509Certificate toCertificate(String certPem) {
+        String base64Cert = certPem
+            .replaceAll("-----BEGIN CERTIFICATE-----", "")
+            .replaceAll("-----END CERTIFICATE-----", "")
+            .replaceAll("\\s", "");
+
+        byte[] certBytes = Base64.decode(base64Cert);
+
+        try {
+            CertificateFactory certFactory = CertificateFactory.getInstance("X.509");
+            return (X509Certificate) certFactory.generateCertificate(new ByteArrayInputStream(certBytes));
+        } catch (Exception e) {
+            throw new CaException("인증서 변환에 실패했습니다.");
+        }
     }
 
     private CertificateGenerateCommand createCommand(

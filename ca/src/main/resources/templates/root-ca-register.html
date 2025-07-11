@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Root Certificate 발급</title>
+  <script src="https://unpkg.com/htmx.org@1.9.2"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f9fafb;
+      color: #333;
+      margin: 0;
+    }
+
+    .con {
+      padding-left: 240px;
+      padding-top: 40px;
+    }
+
+    .form-container {
+      background: #fff;
+      padding: 24px 32px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .form-container h1 {
+      margin-bottom: 24px;
+      color: #1565c0;
+      font-weight: 700;
+      font-size: 1.8em;
+    }
+
+    .form-container label {
+      display: block;
+      margin-bottom: 16px;
+      font-size: 1em;
+    }
+
+    .form-container input[type="text"] {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      margin-top: 6px;
+      font-size: 1em;
+      box-sizing: border-box;
+    }
+
+    .form-container button[type="submit"] {
+      background: #1565c0;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 24px;
+      font-size: 1em;
+      cursor: pointer;
+      margin-top: 16px;
+      transition: background-color 0.3s ease;
+    }
+
+    .form-container button[type="submit"]:hover {
+      background: #0d3b70;
+    }
+
+    #result {
+      margin-top: 24px;
+    }
+
+    .toggle-btn {
+      margin-left: 12px;
+      padding: 6px 14px;
+      background: #eeeeee;
+      color: #1565c0;
+      font-size: 0.95em;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+
+    .toggle-btn:hover {
+      background-color: #e0e0e0;
+    }
+  </style>
+  <script>
+    function toggleInput(type) {
+      const textWrapper = document.getElementById(`${type}-textarea-wrapper`);
+      const fileWrapper = document.getElementById(`${type}-file-wrapper`);
+      const button = document.getElementById(`${type}-toggle-btn`);
+
+      const textArea = textWrapper.querySelector('textarea');
+      const fileInput = fileWrapper.querySelector('input[type="file"]');
+
+      const isTextVisible = textWrapper.style.display !== 'none';
+
+      if (isTextVisible) {
+        textWrapper.style.display = 'none';
+        fileWrapper.style.display = 'block';
+        button.textContent = '문자로 입력하기';
+
+        if (textArea) {
+          textArea.value = '';
+        }
+      } else {
+        textWrapper.style.display = 'block';
+        fileWrapper.style.display = 'none';
+        button.textContent = '파일로 입력하기';
+
+        if (fileInput) {
+          fileInput.value = '';
+        }
+      }
+    }
+  </script>
+</head>
+<body>
+<div th:replace="fragments/nav :: navigation"></div>
+<div class="con">
+  <div class="form-container">
+    <h1>Root CA 인증서 발급</h1>
+
+    <form id="root-ca-form"
+          hx-post="/certificates/enroll-root"
+          hx-target="#result"
+          hx-swap="innerHTML"
+          hx-trigger="submit"
+          enctype="multipart/form-data"
+          method="post">
+      <hr>
+      <h2 style="margin-top: 1em; color:#1565c0;">인증서 및 개인키 등록</h2>
+
+      <label style="margin-top: 1em;">
+        <strong>Certificate 입력 방식</strong>
+        <button type="button" id="cert-toggle-btn" class="toggle-btn" onclick="toggleInput('cert')">
+          파일로 입력하기
+        </button>
+      </label>
+      <div id="cert-textarea-wrapper">
+  <textarea name="certificateText" rows="6" style="width:100%; resize:vertical;"
+            placeholder="-----BEGIN CERTIFICATE----- ..."></textarea>
+      </div>
+      <div id="cert-file-wrapper" style="display: none;">
+        <input type="file" name="certificateFile" accept=".pem,.crt,.cer, .der">
+      </div>
+
+      <label style="margin-top: 1em;">
+        <strong>Private Key 입력 방식</strong>
+        <button type="button" id="key-toggle-btn" class="toggle-btn" onclick="toggleInput('key')">
+          파일로 입력하기
+        </button>
+      </label>
+      <div id="key-textarea-wrapper">
+  <textarea name="privateKeyText" rows="6" style="width:100%; resize:vertical;"
+            placeholder="-----BEGIN PRIVATE KEY----- ..."></textarea>
+      </div>
+      <div id="key-file-wrapper" style="display: none;">
+        <input type="file" name="privateKeyFile" accept=".pem,.key">
+      </div>
+
+      <button type="submit">발급하기</button>
+    </form>
+
+    <div id="result"></div>
+  </div>
+</div>
+</body>
+</html>
