@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<th:block th:fragment="certDownloadButton(cert)">
+  <button
+      onclick="downloadDERFromPem(this)"
+      th:data-cert="${#strings.replace(#strings.replace(cert, '-----BEGIN CERTIFICATE-----', ''), '-----END CERTIFICATE-----', '')}"
+      style="background:#1565c0; color:#fff; border:none; border-radius:8px; padding:12px 24px; font-size:1em; cursor:pointer; transition: background-color 0.3s ease;">
+    인증서 다운로드
+  </button>
+</th:block>
+</html>

@@ -12,4 +12,27 @@
            style="text-decoration: none; color: #333; font-weight: 500;">🔐 Root CA
       발급</a></li>
   </ul>
+  <script>
+    function downloadDERFromPem(button) {
+      const base64 = button.getAttribute('data-cert').replace(/\s+/g, '');
+      try {
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+          bytes[i] = binary.charCodeAt(i);
+        }
+
+        const blob = new Blob([bytes], {type: 'application/x-x509-ca-cert'});
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'certificate.der';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (e) {
+        alert('잘못된 인증서 형식입니다.');
+        console.error(e);
+      }
+    }
+  </script>
 </nav>
