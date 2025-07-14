@@ -2,8 +2,10 @@ package com.example.ca.service;
 
 import com.example.ca.domain.CertificationAuthority;
 import com.example.ca.domain.DistinguishedName;
+import com.example.ca.domain.IssuedCertificate;
 import com.example.ca.domain.Policy;
 import com.example.ca.domain.repository.CertificateAuthorityRepository;
+import com.example.ca.domain.repository.IssuedCertificateRepository;
 import com.example.ca.domain.repository.PolicyRepository;
 import com.example.ca.exception.CaException;
 import com.example.ca.service.command.CertificateGenerateCommand;
@@ -53,6 +55,7 @@ public class CertificateService {
     private final KeyStoreManager keyStoreManager;
     private final CertificateAuthorityRepository certificateAuthorityRepository;
     private final PolicyRepository policyRepository;
+    private final IssuedCertificateRepository issuedCertificateRepository;
 
     @Transactional
     public CertificateDto issueCertificate(CertificateIssueDto certificateIssueDto) {
@@ -61,7 +64,7 @@ public class CertificateService {
         CertificateGenerateCommand command = createCommand(certificateIssueDto, ca, csr);
         X509Certificate cert = certificateGenerator.generateCertificate(command);
         String certPem = PemUtil.toPem(cert);
-
+        issuedCertificateRepository.save(new IssuedCertificate(cert.getSerialNumber()));
         return new CertificateDto(certPem);
     }
 
@@ -77,9 +80,9 @@ public class CertificateService {
 
         String alias = keyStoreManager.setRootKeyEntry(keyPair.getPrivate(), certificate);
         String certificatePem = PemUtil.toPem(certificate);
-        CertificationAuthority certificationAuthority = CertificationAuthority.withAlias(distinguishedName, alias, null, certificatePem);
+        CertificationAuthority certificationAuthority = CertificationAuthority.withAlias(distinguishedName, alias, certificate.getSerialNumber(), null, certificatePem);
         certificateAuthorityRepository.save(certificationAuthority);
-
+        issuedCertificateRepository.save(new IssuedCertificate(certificate.getSerialNumber()));
         return new CertificateDto(certificatePem);
     }
 
@@ -105,8 +108,9 @@ public class CertificateService {
 
         String alias = keyStoreManager.setSubKeyEntry(keyPair.getPrivate(), chain.toArray(Certificate[]::new));
         String certificatePem = PemUtil.toPem(certificate);
-        CertificationAuthority subCa = CertificationAuthority.withAlias(subjectDn, alias, ca, certificatePem);
+        CertificationAuthority subCa = CertificationAuthority.withAlias(subjectDn, alias, certificate.getSerialNumber(), ca, certificatePem);
         certificateAuthorityRepository.save(subCa);
+        issuedCertificateRepository.save(new IssuedCertificate(certificate.getSerialNumber()));
 
         return new CertificateDto(certificatePem);
     }
@@ -143,7 +147,8 @@ public class CertificateService {
         DistinguishedName distinguishedName = DistinguishedName.from(certificate.getIssuerX500Principal().getName());
         validateCaUnique(distinguishedName);
         String alias = keyStoreManager.setRootKeyEntry(privateKey, certificate);
-        CertificationAuthority certificationAuthority = CertificationAuthority.withAlias(distinguishedName, alias, null, PemUtil.toPem(certificate));
+        CertificationAuthority certificationAuthority = CertificationAuthority.withAlias(distinguishedName, alias, certificate.getSerialNumber(), null, PemUtil.toPem(certificate));
+        issuedCertificateRepository.save(new IssuedCertificate(certificate.getSerialNumber()));
 
         return certificateAuthorityRepository.save(certificationAuthority).getId();
     }
