@@ -2,7 +2,9 @@ package com.example.ca.service;
 
 import com.example.ca.domain.CertificationAuthority;
 import com.example.ca.domain.DistinguishedName;
+import com.example.ca.domain.Policy;
 import com.example.ca.domain.repository.CertificateAuthorityRepository;
+import com.example.ca.domain.repository.PolicyRepository;
 import com.example.ca.exception.CaException;
 import com.example.ca.service.command.CertificateGenerateCommand;
 import com.example.ca.service.dto.CertificateDto;
@@ -12,6 +14,7 @@ import com.example.ca.service.dto.CertificationAuthorityViewDto;
 import com.example.ca.service.dto.RootCertificateIssueDto;
 import com.example.ca.service.dto.RootCertificationAuthorityEnrollDto;
 import com.example.ca.service.dto.SubCertificateIssueDto;
+import com.example.ca.service.dto.SubCertificateIssueWithPolicyDto;
 import com.example.ca.util.CertificateUtil;
 import com.example.ca.util.PemUtil;
 import java.nio.charset.StandardCharsets;
@@ -49,6 +52,7 @@ public class CertificateService {
     private final KeyPairGenerator keyPairGenerator;
     private final KeyStoreManager keyStoreManager;
     private final CertificateAuthorityRepository certificateAuthorityRepository;
+    private final PolicyRepository policyRepository;
 
     @Transactional
     public CertificateDto issueCertificate(CertificateIssueDto certificateIssueDto) {
@@ -144,10 +148,33 @@ public class CertificateService {
         return certificateAuthorityRepository.save(certificationAuthority).getId();
     }
 
+    public List<CertificationAuthorityViewDto> getCertificationAuthorityView() {
+        return certificateAuthorityRepository.findAll()
+                                             .stream()
+                                             .map(CertificationAuthorityViewDto::of)
+                                             .toList();
+    }
+
     public CertificationAuthorityViewDto getCertificationAuthority(Long id) {
         CertificationAuthority certificationAuthority = certificateAuthorityRepository.findById(id)
                                                                                       .orElseThrow(() -> new CaException("등록되지 않은 CA입니다."));
         return CertificationAuthorityViewDto.of(certificationAuthority);
+    }
+
+    @Transactional
+    public CertificateDto issueSubCertificateWithPolicy(SubCertificateIssueWithPolicyDto dto) {
+        Policy policy = policyRepository.findById(dto.policyId()).orElseThrow();
+        SubCertificateIssueDto subCertificateIssueDto = new SubCertificateIssueDto(
+            policy.getIssuer().getId(),
+            dto.commonName(),
+            policy.getOrganizationName(),
+            policy.getOrganizationalUnitName(),
+            dto.localityName(),
+            dto.stateOrProvinceName(),
+            policy.getCountryName()
+        );
+
+        return issueSubCertificate(subCertificateIssueDto);
     }
 
     private void validateRootCertificationAuthority(X509Certificate certificate, PrivateKey privateKey) {

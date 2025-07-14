@@ -8,6 +8,7 @@ import com.example.ca.service.dto.CertificationAuthorityViewDto;
 import com.example.ca.service.dto.RootCertificateIssueDto;
 import com.example.ca.service.dto.RootCertificationAuthorityEnrollDto;
 import com.example.ca.service.dto.SubCertificateIssueDto;
+import com.example.ca.service.dto.SubCertificateIssueWithPolicyDto;
 import com.example.ca.util.FileContentExtractor;
 import com.example.ca.util.StringUtil;
 import jakarta.validation.Valid;
@@ -16,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -47,6 +49,13 @@ public class CertificateUiController {
     @PostMapping("/certificates/sub")
     public String issueSubCaCert(@Valid SubCertificateIssueDto dto, Model model) {
         CertificateDto certificateDto = certificateService.issueSubCertificate(dto);
+        model.addAttribute("certificate", certificateDto.certificate());
+        return "fragments/certificate :: result";
+    }
+
+    @PostMapping("/certificates/sub/v2")
+    public String issueSubCaCert(@Valid @ModelAttribute SubCertificateIssueWithPolicyDto dto, Model model) {
+        CertificateDto certificateDto = certificateService.issueSubCertificateWithPolicy(dto);
         model.addAttribute("certificate", certificateDto.certificate());
         return "fragments/certificate :: result";
     }

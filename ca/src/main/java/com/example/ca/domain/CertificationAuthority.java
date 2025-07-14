@@ -27,7 +27,6 @@ public class CertificationAuthority {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-
     @Column
     private String alias;
 

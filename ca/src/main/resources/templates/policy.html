@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>정책 생성</title>
+  <script src="https://unpkg.com/htmx.org@1.9.2"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f9fafb;
+      color: #333;
+      margin: 0;
+    }
+
+    .con {
+      padding-left: 240px;
+      padding-top: 40px;
+    }
+
+    .form-container {
+      background: #fff;
+      padding: 24px 32px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .form-container h1 {
+      margin-bottom: 24px;
+      color: #1565c0;
+      font-weight: 700;
+      font-size: 1.8em;
+    }
+
+    .form-container label {
+      display: block;
+      margin-bottom: 16px;
+      font-size: 1em;
+    }
+
+    .form-container input[type="text"],
+    .form-container select {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      margin-top: 6px;
+      font-size: 1em;
+      box-sizing: border-box;
+    }
+
+    .form-container button[type="submit"] {
+      background: #1565c0;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 24px;
+      font-size: 1em;
+      cursor: pointer;
+      margin-top: 16px;
+      transition: background-color 0.3s ease;
+    }
+
+    .form-container button[type="submit"]:hover {
+      background: #0d3b70;
+    }
+
+    #result {
+      margin-top: 24px;
+    }
+  </style>
+</head>
+<body>
+<div th:replace="fragments/nav :: navigation"></div>
+<div class="con">
+  <div class="form-container">
+    <h1>정책 생성</h1>
+
+    <form id="policy-form"
+          action="/policies"
+          method="post">
+
+      <label>정책 이름 (policyName):
+        <input type="text" name="policyName" required>
+      </label>
+
+      <label>Issuer 선택:
+        <select name="issuerId" required>
+          <option th:each="issuer : ${authorities}"
+                  th:value="${issuer.id}"
+                  th:text="${issuer.commonName + ' (' + issuer.distinguishedName + ')'}">
+          </option>
+        </select>
+      </label>
+
+      <label>Organization (O):
+        <input type="text" name="organizationName" required>
+      </label>
+
+      <label>Organizational Unit (OU):
+        <input type="text" name="organizationalUnitName">
+      </label>
+
+      <label>Country (C):
+        <input type="text" name="countryName" maxlength="2" required>
+      </label>
+
+      <button type="submit">정책 생성</button>
+    </form>
+
+  </div>
+</div>
+</body>
+</html>

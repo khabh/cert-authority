@@ -1,5 +1,6 @@
 package com.example.ca.service;
 
+import com.example.ca.service.dto.PolicyCreateDto;
 import com.example.ca.service.dto.RootCertificateIssueDto;
 import com.example.ca.service.dto.SubCertificateIssueDto;
 import java.util.stream.IntStream;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Component;
 class DataInitializer implements ApplicationRunner {
 
     private final CertificateService certificateService;
+    private final PolicyService policyService;
 
     @Override
     public void run(ApplicationArguments args) {
@@ -51,5 +53,14 @@ class DataInitializer implements ApplicationRunner {
                       "KR"
                   ))
                   .forEach(certificateService::issueSubCertificate);
+        LongStream.range(1, 4)
+                  .mapToObj(number -> new PolicyCreateDto(
+                      "policy" + number,
+                      number,
+                      "po" + number,
+                      "pou" + number,
+                      "AU"
+                  ))
+                  .forEach(policyService::createPolicy);
     }
 }
