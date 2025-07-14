@@ -12,23 +12,28 @@ import com.example.ca.service.dto.CertificationAuthorityViewDto;
 import com.example.ca.service.dto.RootCertificateIssueDto;
 import com.example.ca.service.dto.RootCertificationAuthorityEnrollDto;
 import com.example.ca.service.dto.SubCertificateIssueDto;
+import com.example.ca.util.PemUtil;
 import java.io.ByteArrayInputStream;
-import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.KeyStore;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.Signature;
+import java.security.cert.Certificate;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import org.bouncycastle.asn1.x500.X500Name;
-import org.bouncycastle.openssl.jcajce.JcaPEMWriter;
 import org.bouncycastle.pkcs.PKCS10CertificationRequest;
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest;
 import org.bouncycastle.util.encoders.Base64;
@@ -45,6 +50,8 @@ public class CertificateService {
     private final CsrProcessor csrProcessor;
     private final PrivateKeyParser privateKeyParser;
     private final CertificateAuthorityRepository certificateAuthorityRepository;
+    private final KeyPairGenerator keyPairGenerator;
+    private final KeyStore keyStore;
 
     @Transactional
     public CertificateDto issueSubCertificate(SubCertificateIssueDto subCertificateIssueDto) {
@@ -62,9 +69,9 @@ public class CertificateService {
         );
 
         X509Certificate certificate = certificateGenerator.generateCertificate(command);
-        String certificatePem = toPem(certificate);
+        String certificatePem = PemUtil.toPem(certificate);
 
-        String secretKey = toPem(keyPair.getPrivate());
+        String secretKey = PemUtil.toPem(keyPair.getPrivate());
         CertificationAuthority certificationAuthority = new CertificationAuthority(subjectDn, secretKey, ca, certificatePem);
         certificateAuthorityRepository.save(certificationAuthority);
 
@@ -77,7 +84,7 @@ public class CertificateService {
         CertificationAuthority ca = findCertificationAuthority(certificateIssueDto.certificateAuthorityId());
         CertificateGenerateCommand command = createCommand(certificateIssueDto, ca, csr);
         X509Certificate cert = certificateGenerator.generateCertificate(command);
-        String certPem = toPem(cert);
+        String certPem = PemUtil.toPem(cert);
 
         return new CertificateDto(certPem);
     }
@@ -91,13 +98,105 @@ public class CertificateService {
         KeyPair keyPair = keyGenerator.generateKeyPair();
         CertificateGenerateCommand command = CertificateGenerateCommand.ofSelfSign(subject, keyPair, 365);
         X509Certificate certificate = certificateGenerator.generateCertificate(command);
-        String certificatePem = toPem(certificate);
+        String certificatePem = PemUtil.toPem(certificate);
 
-        String secretKey = toPem(keyPair.getPrivate());
+        String secretKey = PemUtil.toPem(keyPair.getPrivate());
         CertificationAuthority certificationAuthority = new CertificationAuthority(distinguishedName, secretKey, certificatePem);
         certificateAuthorityRepository.save(certificationAuthority);
 
         return new CertificateDto(certificatePem);
+    }
+
+    @Transactional
+    public CertificateDto issueRootCertificateWithHsm(RootCertificateIssueDto rootCertificateIssueDto) {
+        DistinguishedName distinguishedName = dtoToDistinguishedName(rootCertificateIssueDto);
+        validateCaUnique(distinguishedName);
+
+        X500Name subject = distinguishedName.toX500Name();
+        KeyPair keyPair = keyPairGenerator.generateKeyPair();
+        CertificateGenerateCommand command = CertificateGenerateCommand.ofSelfSign(subject, keyPair, 365);
+        X509Certificate certificate = certificateGenerator.generateCertificate(command);
+
+        String alias = "ca-" + System.currentTimeMillis();
+        try {
+            keyStore.setKeyEntry(alias, keyPair.getPrivate(), "userpin".toCharArray(), new Certificate[]{certificate});
+
+        } catch (Exception e) {
+            throw new CaException("Failed to set key entry", e);
+        }
+
+        String certificatePem = PemUtil.toPem(certificate);
+        CertificationAuthority certificationAuthority = CertificationAuthority.withAlias(distinguishedName, alias, null, certificatePem);
+        certificateAuthorityRepository.save(certificationAuthority);
+
+        return new CertificateDto(certificatePem);
+    }
+
+    @Transactional
+    public CertificateDto issueSubCertificateWithHsm(SubCertificateIssueDto subCertificateIssueDto) {
+        DistinguishedName subjectDn = dtoToDistinguishedName(subCertificateIssueDto);
+        validateCaUnique(subjectDn);
+        CertificationAuthority ca = findCertificationAuthority(subCertificateIssueDto.caId());
+        PrivateKey issuerPrivateKey = getPrivateKey(ca.getAlias());
+
+        KeyPair keyPair = keyPairGenerator.generateKeyPair();
+        CertificateGenerateCommand command = new CertificateGenerateCommand(
+            ca.getX500Name(),
+            subjectDn.toX500Name(),
+            keyPair.getPublic(),
+            issuerPrivateKey,
+            365
+        );
+
+        String alias = "ca-" + System.currentTimeMillis();
+        X509Certificate certificate = certificateGenerator.generateCertificate(command);
+        String certificatePem = PemUtil.toPem(certificate);
+        CertificationAuthority subCa = CertificationAuthority.withAlias(subjectDn, alias, ca, certificatePem);
+        certificateAuthorityRepository.save(subCa);
+
+        try {
+            keyStore.setKeyEntry(
+                alias,
+                keyPair.getPrivate(),
+                "userpin".toCharArray(),
+                findIssuerChain(subCa)
+            );
+        } catch (Exception e) {
+            throw new CaException("Failed to set key entry", e);
+        }
+
+        return new CertificateDto(certificatePem);
+    }
+
+    private Certificate[] findIssuerChain(CertificationAuthority ca) {
+        return Stream.iterate(ca, Objects::nonNull, CertificationAuthority::getIssuer)
+                     .map(caEntry -> fromPemString(caEntry.getCertificate()))
+                     .collect(Collectors.collectingAndThen(
+                         Collectors.toList(),
+                         list -> {
+                             Collections.reverse(list);
+                             return list.toArray(Certificate[]::new);
+                         }
+                     ));
+    }
+
+    private PrivateKey getPrivateKey(String alias) {
+        try {
+            return (PrivateKey) keyStore.getKey(alias, "userpin".toCharArray());
+        } catch (Exception e) {
+            throw new CaException("Failed to retrieve private key", e);
+        }
+    }
+
+    private X509Certificate fromPemString(String certPem) {
+        try (ByteArrayInputStream inputStream =
+            new ByteArrayInputStream(certPem.trim().getBytes(StandardCharsets.UTF_8))) {
+            CertificateFactory certFactory = CertificateFactory.getInstance("X.509");
+            Certificate certificate = certFactory.generateCertificate(inputStream);
+            return (X509Certificate) certificate;
+        } catch (Exception e) {
+            throw new CaException("Failed to retrieve certificate", e);
+        }
     }
 
     public List<CertificationAuthorityTreeDto> getCertificationAuthorityTree() {
@@ -118,10 +217,17 @@ public class CertificateService {
     public Long enrollRootCertificationAuthority(RootCertificationAuthorityEnrollDto dto) {
         X509Certificate certificate = toCertificate(dto.certificate());
         PrivateKey privateKey = privateKeyParser.parsePrivateKey(dto.privateKey());
+
         validateRootCertificationAuthority(certificate, privateKey);
         DistinguishedName distinguishedName = DistinguishedName.from(certificate.getIssuerX500Principal().getName());
         validateCaUnique(distinguishedName);
-        CertificationAuthority certificationAuthority = new CertificationAuthority(distinguishedName, toPem(privateKey), toPem(certificate));
+        String alias = "ca-" + System.currentTimeMillis();
+        CertificationAuthority certificationAuthority = CertificationAuthority.withAlias(distinguishedName, alias, null, PemUtil.toPem(certificate));
+        try {
+            keyStore.setKeyEntry(alias, privateKey, "userpin".toCharArray(), new Certificate[]{certificate});
+        } catch (Exception e) {
+            throw new CaException("Failed to set key entry", e);
+        }
 
         return certificateAuthorityRepository.save(certificationAuthority).getId();
     }
@@ -211,7 +317,7 @@ public class CertificateService {
             ca.getX500Name(),
             csr.getSubject(),
             subjectKey,
-            privateKeyParser.parsePrivateKey(ca.getSecretKey()),
+            getPrivateKey(ca.getAlias()),
             certificateIssueDto.validityDays()
         );
     }
@@ -247,17 +353,5 @@ public class CertificateService {
                                 .stateOrProvinceName(subCertificateIssueDto.stateOrProvinceName())
                                 .countryName(subCertificateIssueDto.countryName())
                                 .build();
-    }
-
-    private String toPem(Object object) {
-        try (StringWriter writer = new StringWriter();
-            JcaPEMWriter pemWriter = new JcaPEMWriter(writer)) {
-            pemWriter.writeObject(object);
-            pemWriter.flush();
-
-            return writer.toString();
-        } catch (Exception e) {
-            throw new CaException("PEM 변환에 실패했습니다.", e);
-        }
     }
 }

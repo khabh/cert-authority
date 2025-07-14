@@ -28,8 +28,8 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
-    implementation 'org.bouncycastle:bcprov-jdk15on:1.70'
-    implementation 'org.bouncycastle:bcpkix-jdk15on:1.70'
+    implementation 'org.bouncycastle:bcprov-jdk18on:1.79'
+    implementation 'org.bouncycastle:bcpkix-jdk18on:1.79'
     compileOnly 'org.projectlombok:lombok'
     runtimeOnly 'com.h2database:h2'
     annotationProcessor 'org.projectlombok:lombok'
@@ -39,4 +39,21 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+def p11Args = [
+        "--add-modules=jdk.crypto.cryptoki",
+        "--add-exports=jdk.crypto.cryptoki/sun.security.pkcs11=ALL-UNNAMED"
+]
+
+tasks.withType(JavaExec).configureEach {
+    jvmArgs p11Args
+}
+
+tasks.withType(Test).configureEach {
+    jvmArgs p11Args
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs.addAll(p11Args)
 }

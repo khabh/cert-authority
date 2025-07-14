@@ -24,7 +24,7 @@ public class CertificateController {
 
     @PostMapping("/certificates/root")
     public CertificateDto issueRootCertificate(@Valid @RequestBody RootCertificateIssueDto rootCertificateIssueDto) {
-        return certificateService.issueRootCertificate(rootCertificateIssueDto);
+        return certificateService.issueRootCertificateWithHsm(rootCertificateIssueDto);
     }
 
     @PostMapping("/certificates")
@@ -34,7 +34,7 @@ public class CertificateController {
 
     @PostMapping("/certificates/sub")
     public CertificateDto issueSubCertificate(@Valid @RequestBody SubCertificateIssueDto subCertificateIssueDto) {
-        return certificateService.issueSubCertificate(subCertificateIssueDto);
+        return certificateService.issueSubCertificateWithHsm(subCertificateIssueDto);
     }
 
     @PostMapping("/certificates/leaf")

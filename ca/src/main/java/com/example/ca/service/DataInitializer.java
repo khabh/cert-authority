@@ -28,7 +28,7 @@ class DataInitializer implements ApplicationRunner {
                      "Gang",
                      "KR"
                  ))
-                 .forEach(certificateService::issueRootCertificate);
+                 .forEach(certificateService::issueRootCertificateWithHsm);
         LongStream.range(2, 4)
                   .mapToObj(number -> new SubCertificateIssueDto(
                       number,
@@ -39,7 +39,7 @@ class DataInitializer implements ApplicationRunner {
                       "Gang",
                       "KR"
                   ))
-                  .forEach(certificateService::issueSubCertificate);
+                  .forEach(certificateService::issueSubCertificateWithHsm);
         LongStream.range(4, 6)
                   .mapToObj(number -> new SubCertificateIssueDto(
                       number,
@@ -50,6 +50,6 @@ class DataInitializer implements ApplicationRunner {
                       "Gang",
                       "KR"
                   ))
-                  .forEach(certificateService::issueSubCertificate);
+                  .forEach(certificateService::issueSubCertificateWithHsm);
     }
 }

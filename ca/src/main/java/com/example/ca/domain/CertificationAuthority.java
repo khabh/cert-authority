@@ -10,7 +10,6 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -28,13 +27,16 @@ public class CertificationAuthority {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+
+    @Column
+    private String alias;
+
     @NotNull
     @Column(name = "dn", nullable = false, unique = true)
     @Convert(converter = DistinguishedNameConverter.class)
     private DistinguishedName distinguishedName;
 
-    @NotBlank
-    @Column(name = "sk", nullable = false, length = 4000)
+    @Column(name = "sk", length = 4000)
     private String secretKey;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -44,8 +46,16 @@ public class CertificationAuthority {
     @Column(name = "certificate", nullable = false, length = 4000)
     private String certificate;
 
+    public static CertificationAuthority withAlias(
+        DistinguishedName distinguishedName,
+        String alias,
+        CertificationAuthority issuer,
+        String certificate) {
+        return new CertificationAuthority(null, alias, distinguishedName, null, issuer, certificate);
+    }
+
     public CertificationAuthority(DistinguishedName distinguishedName, String secretKey, String certificate) {
-        this(null, distinguishedName, secretKey, null, certificate);
+        this(null, null, distinguishedName, secretKey, null, certificate);
     }
 
     public CertificationAuthority(
@@ -53,7 +63,7 @@ public class CertificationAuthority {
         String secretKey,
         CertificationAuthority issuer,
         String certificate) {
-        this(null, distinguishedName, secretKey, issuer, certificate);
+        this(null, null, distinguishedName, secretKey, issuer, certificate);
     }
 
     public X500Name getX500Name() {
