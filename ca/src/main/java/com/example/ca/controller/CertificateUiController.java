@@ -39,14 +39,14 @@ public class CertificateUiController {
 
     @PostMapping("/certificates/root")
     public String issueRootCaCert(@Valid RootCertificateIssueDto dto, Model model) {
-        CertificateDto certificateDto = certificateService.issueRootCertificateWithHsm(dto);
+        CertificateDto certificateDto = certificateService.issueRootCertificate(dto);
         model.addAttribute("certificate", certificateDto.certificate());
         return "fragments/certificate :: result";
     }
 
     @PostMapping("/certificates/sub")
     public String issueSubCaCert(@Valid SubCertificateIssueDto dto, Model model) {
-        CertificateDto certificateDto = certificateService.issueSubCertificateWithHsm(dto);
+        CertificateDto certificateDto = certificateService.issueSubCertificate(dto);
         model.addAttribute("certificate", certificateDto.certificate());
         return "fragments/certificate :: result";
     }

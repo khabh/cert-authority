@@ -39,7 +39,7 @@ class CertificateControllerTest {
 
         CertificateDto response = new CertificateDto("-----BEGIN CERTIFICATE-----\n...certificate...\n-----END CERTIFICATE-----");
 
-        when(certificateService.issueRootCertificateWithHsm(request)).thenReturn(response);
+        when(certificateService.issueRootCertificate(request)).thenReturn(response);
 
         mockMvc.perform(post("/api/certificates/root")
                    .contentType(MediaType.APPLICATION_JSON)

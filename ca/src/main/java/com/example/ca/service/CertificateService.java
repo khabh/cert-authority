@@ -46,9 +46,9 @@ public class CertificateService {
     private final CertificateGenerator certificateGenerator;
     private final CsrProcessor csrProcessor;
     private final PrivateKeyParser privateKeyParser;
-    private final CertificateAuthorityRepository certificateAuthorityRepository;
     private final KeyPairGenerator keyPairGenerator;
     private final KeyStoreManager keyStoreManager;
+    private final CertificateAuthorityRepository certificateAuthorityRepository;
 
     @Transactional
     public CertificateDto issueCertificate(CertificateIssueDto certificateIssueDto) {
@@ -62,7 +62,7 @@ public class CertificateService {
     }
 
     @Transactional
-    public CertificateDto issueRootCertificateWithHsm(RootCertificateIssueDto rootCertificateIssueDto) {
+    public CertificateDto issueRootCertificate(RootCertificateIssueDto rootCertificateIssueDto) {
         DistinguishedName distinguishedName = dtoToDistinguishedName(rootCertificateIssueDto);
         validateCaUnique(distinguishedName);
 
@@ -80,7 +80,7 @@ public class CertificateService {
     }
 
     @Transactional
-    public CertificateDto issueSubCertificateWithHsm(SubCertificateIssueDto subCertificateIssueDto) {
+    public CertificateDto issueSubCertificate(SubCertificateIssueDto subCertificateIssueDto) {
         DistinguishedName subjectDn = dtoToDistinguishedName(subCertificateIssueDto);
         validateCaUnique(subjectDn);
         CertificationAuthority ca = findCertificationAuthority(subCertificateIssueDto.caId());

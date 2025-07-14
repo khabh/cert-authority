@@ -10,9 +10,13 @@ import com.example.ca.exception.CaException;
 import com.example.ca.service.dto.CertificateDto;
 import com.example.ca.service.dto.CertificateIssueDto;
 import com.example.ca.service.dto.RootCertificateIssueDto;
+import com.example.ca.service.dto.SubCertificateIssueDto;
 import com.example.ca.testutil.CsrTestUtil;
 import com.example.ca.testutil.GeneratedCsr;
 import com.example.ca.testutil.PemUtils;
+import com.example.ca.util.CertificateUtil;
+import java.security.KeyStore;
+import java.security.PublicKey;
 import java.security.cert.X509Certificate;
 import java.util.Date;
 import org.bouncycastle.asn1.x500.X500Name;
@@ -29,10 +33,28 @@ class CertificateServiceTest {
     CertificateService certificateService;
 
     @Autowired
+    KeyStoreManager keyStoreManager;
+
+    @Autowired
+    KeyStore keyStore;
+
+    @Autowired
     CertificateAuthorityRepository certificateAuthorityRepository;
 
     @BeforeEach
     void setUp() {
+        certificateAuthorityRepository.findAll()
+                                      .stream()
+                                      .map(CertificationAuthority::getAlias)
+                                      .forEach(alias -> {
+                                          try {
+                                              if (keyStore.containsAlias(alias)) {
+                                                  keyStore.deleteEntry(alias);
+                                              }
+                                          } catch (Exception e) {
+                                              throw new RuntimeException(e);
+                                          }
+                                      });
         certificateAuthorityRepository.deleteAll();
     }
 
@@ -102,5 +124,38 @@ class CertificateServiceTest {
 
         X500Name actualIssuer = new X500Name(cert.getIssuerX500Principal().getName());
         assertThat(actualIssuer).isEqualTo(issuerX500Name);
+    }
+
+    @Test
+    @DisplayName("서브 인증서를 HSM을 통해 발급할 수 있다.")
+    void issueSubCertificate() throws Exception {
+        RootCertificateIssueDto rootDto = new RootCertificateIssueDto(
+            "Root CN", "Root Org", "Root Unit", "Seoul", "Seoul", "KR"
+        );
+        certificateService.issueRootCertificate(rootDto);
+        CertificationAuthority rootCa = certificateAuthorityRepository.findAll().getFirst();
+
+        SubCertificateIssueDto subDto = new SubCertificateIssueDto(
+            rootCa.getId(),
+            "Sub CN", "Sub Org", "Sub Unit", "Seoul", "Seoul", "KR"
+        );
+
+        CertificateDto result = certificateService.issueSubCertificate(subDto);
+        X509Certificate cert = PemUtils.parseCertificateFromPem(result.certificate());
+
+        assertThat(cert.getSubjectX500Principal().getName())
+            .contains("CN=Sub CN")
+            .contains("O=Sub Org")
+            .contains("OU=Sub Unit")
+            .contains("C=KR");
+        assertThat(new X500Name(cert.getIssuerX500Principal().getName()))
+            .isEqualTo(rootCa.getX500Name());
+
+        PublicKey rootPublicKey = CertificateUtil.getCertificate(rootCa.getCertificate()).getPublicKey();
+        cert.verify(rootPublicKey);
+
+        CertificationAuthority ca = certificateAuthorityRepository.findAll().getLast();
+        assertThat(ca.getIssuerId()).isEqualTo(rootCa.getId());
+        assertThat(keyStoreManager.getPrivateKey(ca.getAlias())).isNotNull();
     }
 }
