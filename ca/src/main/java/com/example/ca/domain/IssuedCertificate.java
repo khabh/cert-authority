@@ -38,7 +38,6 @@ public class IssuedCertificate {
     @Enumerated(EnumType.STRING)
     private CertificateStatus status;
 
-    @NotNull
     @ManyToOne(fetch = FetchType.LAZY)
     private CertificationAuthority issuer;
 
@@ -78,5 +77,16 @@ public class IssuedCertificate {
             return;
         }
         this.status = CertificateStatus.SUSPENDED;
+    }
+
+    public boolean hasToRegenerateKey() {
+        return revokedReason.isRegenerateKey();
+    }
+
+    public void resume() {
+        if (status != CertificateStatus.SUSPENDED) {
+            throw new CaException("Certificate is already resumed");
+        }
+        this.status = CertificateStatus.GOOD;
     }
 }

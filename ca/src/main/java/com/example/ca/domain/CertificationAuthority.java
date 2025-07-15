@@ -18,10 +18,12 @@ import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.bouncycastle.asn1.x500.X500Name;
 
 @Entity
 @Getter
+@Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class CertificationAuthority {
@@ -112,5 +114,18 @@ public class CertificationAuthority {
 
     public boolean isInactive() {
         return this.status == CaStatus.INACTIVE;
+    }
+
+    public void renew(String alias, String certificate, BigInteger serial) {
+        this.alias = alias;
+        this.certificate = certificate;
+        this.status = CaStatus.ACTIVE;
+        this.serial = serial;
+    }
+
+    public void active(String certificate, BigInteger serial) {
+        this.certificate = certificate;
+        this.serial = serial;
+        this.status = CaStatus.ACTIVE;
     }
 }

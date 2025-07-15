@@ -137,4 +137,10 @@ public class CertificateUiController {
     public String showRevokeForm() {
         return "certificate-revoke";
     }
+
+    @PostMapping("/certificates/{caId}/renew")
+    public String renewCertificate(@PathVariable Long caId) {
+        certificateService.renewCaCertificate(caId);
+        return "redirect:/dashboard";
+    }
 }

@@ -32,4 +32,5 @@ public interface CertificateAuthorityRepository extends JpaRepository<Certificat
                 """, nativeQuery = true)
     List<CertificationAuthority> findAllDescendantsByIssuerId(@Param("issuerId") Long issuerId);
 
+    List<CertificationAuthority> findAllByIssuer(CertificationAuthority ca);
 }

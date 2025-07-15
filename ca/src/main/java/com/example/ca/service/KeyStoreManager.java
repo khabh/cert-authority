@@ -11,6 +11,7 @@ import java.util.Locale;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.util.Assert;
 
 @Component
 @RequiredArgsConstructor
@@ -51,9 +52,20 @@ public class KeyStoreManager {
 
     public PrivateKey getPrivateKey(String alias) {
         try {
-            return (PrivateKey) keyStore.getKey(alias, password);
+            PrivateKey key = (PrivateKey) keyStore.getKey(alias, password);
+            Assert.notNull(key, alias + " has no private key.");
+
+            return key;
         } catch (Exception e) {
             throw new CaException("Failed to retrieve private key", e);
+        }
+    }
+
+    public void removeKeyEntry(String alias) {
+        try {
+            keyStore.deleteEntry(alias);
+        } catch (Exception e) {
+            throw new CaException("Failed to remove key entry", e);
         }
     }
 

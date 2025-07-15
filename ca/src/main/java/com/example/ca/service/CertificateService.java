@@ -33,6 +33,7 @@ import java.security.Signature;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -65,6 +66,7 @@ public class CertificateService {
     public CertificateDto issueCertificate(CertificateIssueDto certificateIssueDto) {
         PKCS10CertificationRequest csr = csrProcessor.parseValidCsr(certificateIssueDto.csr());
         CertificationAuthority ca = findCertificationAuthority(certificateIssueDto.certificateAuthorityId());
+        findActiveIssuerChain(ca);
         CertificateGenerateCommand command = createCommand(certificateIssueDto, ca, csr);
         X509Certificate cert = certificateGenerator.generateCertificate(command);
         String certPem = PemUtil.toPem(cert);
@@ -86,7 +88,7 @@ public class CertificateService {
         String certificatePem = PemUtil.toPem(certificate);
         CertificationAuthority certificationAuthority = CertificationAuthority.withAlias(distinguishedName, alias, certificate.getSerialNumber(), null, certificatePem);
         certificateAuthorityRepository.save(certificationAuthority);
-        issuedCertificateRepository.save(new IssuedCertificate(certificate.getSerialNumber(), certificationAuthority));
+        issuedCertificateRepository.save(new IssuedCertificate(certificate.getSerialNumber(), null));
         return new CertificateDto(certificatePem);
     }
 
@@ -157,9 +159,10 @@ public class CertificateService {
         validateCaUnique(distinguishedName);
         String alias = keyStoreManager.setRootKeyEntry(privateKey, certificate);
         CertificationAuthority certificationAuthority = CertificationAuthority.withAlias(distinguishedName, alias, certificate.getSerialNumber(), null, PemUtil.toPem(certificate));
-        issuedCertificateRepository.save(new IssuedCertificate(certificate.getSerialNumber(), certificationAuthority));
+        certificateAuthorityRepository.save(certificationAuthority);
+        issuedCertificateRepository.save(new IssuedCertificate(certificate.getSerialNumber(), null));
 
-        return certificateAuthorityRepository.save(certificationAuthority).getId();
+        return certificationAuthority.getId();
     }
 
     public List<CertificationAuthorityViewDto> getCertificationAuthorityView() {
@@ -200,6 +203,105 @@ public class CertificateService {
         issuedCertificate.revoke(reason);
         certificateAuthorityRepository.findBySerial(serial)
                                       .ifPresent(certificationAuthority -> revokeCertificateAuthority(certificationAuthority, reason));
+    }
+
+    @Transactional
+    public void renewCaCertificate(Long caId) {
+        CertificationAuthority ca = certificateAuthorityRepository.findById(caId).orElseThrow();
+        if (!ca.isInactive()) {
+            throw new CaException("INACTIVE 상태의 CA만 재발급할 수 있습니다.");
+        }
+        IssuedCertificate issuedCertificate = issuedCertificateRepository.findBySerial(ca.getSerial())
+                                                                         .orElseThrow();
+
+        if (issuedCertificate.hasToRegenerateKey()) {
+            renewCertificateAuthorityByKey(ca);
+            return;
+        }
+
+        if (ca.isRoot()) {
+            X509Certificate certificate = CertificateUtil.getCertificate(ca.getCertificate());
+            KeyPair keyPair = new KeyPair(certificate.getPublicKey(), keyStoreManager.getPrivateKey(ca.getAlias()));
+            X509Certificate renew = certificateGenerator.generateCertificate(CertificateGenerateCommand.ofSelfSign(
+                ca.getX500Name(),
+                keyPair,
+                365
+            ));
+            ca.active(PemUtil.toPem(renew), renew.getSerialNumber());
+            issuedCertificateRepository.save(new IssuedCertificate(renew.getSerialNumber(), null));
+            renewCertificateAuthorityWithoutKey(ca, new Certificate[]{});
+        } else {
+            CertificationAuthority issuer = certificateAuthorityRepository.findById(ca.getIssuerId()).orElseThrow();
+            X509Certificate certificate = CertificateUtil.getCertificate(ca.getCertificate());
+            X509Certificate renew = certificateGenerator.generateCertificate(new CertificateGenerateCommand(
+                issuer.getX500Name(),
+                ca.getX500Name(),
+                certificate.getPublicKey(),
+                keyStoreManager.getPrivateKey(issuer.getAlias()),
+                365
+            ));
+            ca.active(PemUtil.toPem(renew), renew.getSerialNumber());
+            issuedCertificateRepository.save(new IssuedCertificate(renew.getSerialNumber(), issuer));
+
+            renewCertificateAuthorityWithoutKey(ca, findActiveIssuerChain(ca).toArray(Certificate[]::new));
+        }
+    }
+
+    private void renewCertificateAuthorityWithoutKey(CertificationAuthority ca, Certificate[] certificates) {
+        Certificate[] currentChain = Stream.concat(
+            Stream.of(CertificateUtil.getCertificate(ca.getCertificate())),
+            Arrays.stream(certificates)
+        ).toArray(Certificate[]::new);
+
+        issuedCertificateRepository.findAllByIssuer(ca)
+                                   .forEach(IssuedCertificate::resume);
+
+        String alias = keyStoreManager.setKeyEntry(keyStoreManager.getPrivateKey(ca.getAlias()), currentChain, ca.getType());
+        keyStoreManager.removeKeyEntry(ca.getAlias());
+        ca.setAlias(alias);
+        certificateAuthorityRepository.findAllByIssuer(ca)
+                                      .forEach(sub -> renewCertificateAuthorityWithoutKey(sub, currentChain));
+    }
+
+    private void renewCertificateAuthorityByKey(CertificationAuthority ca) {
+        if (ca.isRoot()) {
+            KeyPair keyPair = keyPairGenerator.generateKeyPair();
+            X509Certificate certificate = certificateGenerator.generateCertificate(CertificateGenerateCommand.ofSelfSign(
+                ca.getX500Name(),
+                keyPair,
+                365
+            ));
+            String alias = keyStoreManager.setRootKeyEntry(keyPair.getPrivate(), certificate);
+            ca.renew(alias, PemUtil.toPem(certificate), certificate.getSerialNumber());
+            issuedCertificateRepository.save(new IssuedCertificate(certificate.getSerialNumber(), ca));
+            certificateAuthorityRepository.findAllByIssuer(ca)
+                                          .forEach(sub -> renewCertificateAuthorityByKey(sub, new Certificate[]{certificate}));
+        } else {
+            renewCertificateAuthorityByKey(ca, findActiveIssuerChain(ca).toArray(Certificate[]::new));
+        }
+    }
+
+    private void renewCertificateAuthorityByKey(CertificationAuthority ca, Certificate[] certificates) {
+        KeyPair keyPair = keyPairGenerator.generateKeyPair();
+
+        CertificationAuthority issuer = ca.getIssuer();
+        X509Certificate certificate = certificateGenerator.generateCertificate(new CertificateGenerateCommand(
+            issuer.getX500Name(),
+            ca.getX500Name(),
+            keyPair.getPublic(),
+            keyStoreManager.getPrivateKey(issuer.getAlias()),
+            365
+        ));
+
+        Certificate[] currentChain = Stream.concat(
+            Stream.of(certificate),
+            Arrays.stream(certificates)
+        ).toArray(Certificate[]::new);
+        String alias = keyStoreManager.setSubKeyEntry(keyPair.getPrivate(), currentChain);
+        ca.renew(alias, PemUtil.toPem(certificate), certificate.getSerialNumber());
+        issuedCertificateRepository.save(new IssuedCertificate(certificate.getSerialNumber(), issuer));
+        certificateAuthorityRepository.findAllByIssuer(ca)
+                                      .forEach(sub -> renewCertificateAuthorityByKey(sub, currentChain));
     }
 
     private void revokeCertificateAuthority(CertificationAuthority ca, RevocationReason reason) {

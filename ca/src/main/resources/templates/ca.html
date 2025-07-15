@@ -68,8 +68,17 @@
           th:disabled="${ca.status.name() == 'INACTIVE'}">리프 인증서 발급
       </button>
 
-      <div th:replace="~{fragments/download :: certDownloadButton(${ca.certificate})}"></div>
-
+      <button
+          style="background:#1565c0; color:#fff; border:none; border-radius:8px; padding:12px 24px; font-size:1em; cursor:pointer; transition: background-color 0.3s ease;"
+          th:if="${ca.status.name() == 'INACTIVE'}"
+          th:attr="hx-post=@{/certificates/{id}/renew(id=${ca.id})}"
+          class="renew-btn">
+        재발급
+      </button>
+      <div th:if="${ca.status.name() == 'ACTIVE'}">
+        <div
+            th:replace="~{fragments/download :: certDownloadButton(${ca.certificate})}"></div>
+      </div>
       <div th:if="${ca.status.name() == 'INACTIVE'}" class="warn-box">
         ⚠ 현재 이 인증서는 <strong>비활성화</strong> 상태입니다. 새로운 인증서를 발급할 수 없습니다.
       </div>
