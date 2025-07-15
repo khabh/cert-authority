@@ -66,7 +66,7 @@ public class CertificateService {
         CertificateGenerateCommand command = createCommand(certificateIssueDto, ca, csr);
         X509Certificate cert = certificateGenerator.generateCertificate(command);
         String certPem = PemUtil.toPem(cert);
-        issuedCertificateRepository.save(new IssuedCertificate(cert.getSerialNumber()));
+        issuedCertificateRepository.save(new IssuedCertificate(cert.getSerialNumber(), ca));
         return new CertificateDto(certPem);
     }
 
@@ -84,7 +84,7 @@ public class CertificateService {
         String certificatePem = PemUtil.toPem(certificate);
         CertificationAuthority certificationAuthority = CertificationAuthority.withAlias(distinguishedName, alias, certificate.getSerialNumber(), null, certificatePem);
         certificateAuthorityRepository.save(certificationAuthority);
-        issuedCertificateRepository.save(new IssuedCertificate(certificate.getSerialNumber()));
+        issuedCertificateRepository.save(new IssuedCertificate(certificate.getSerialNumber(), certificationAuthority));
         return new CertificateDto(certificatePem);
     }
 
@@ -112,7 +112,7 @@ public class CertificateService {
         String certificatePem = PemUtil.toPem(certificate);
         CertificationAuthority subCa = CertificationAuthority.withAlias(subjectDn, alias, certificate.getSerialNumber(), ca, certificatePem);
         certificateAuthorityRepository.save(subCa);
-        issuedCertificateRepository.save(new IssuedCertificate(certificate.getSerialNumber()));
+        issuedCertificateRepository.save(new IssuedCertificate(certificate.getSerialNumber(), ca));
 
         return new CertificateDto(certificatePem);
     }
@@ -155,7 +155,7 @@ public class CertificateService {
         validateCaUnique(distinguishedName);
         String alias = keyStoreManager.setRootKeyEntry(privateKey, certificate);
         CertificationAuthority certificationAuthority = CertificationAuthority.withAlias(distinguishedName, alias, certificate.getSerialNumber(), null, PemUtil.toPem(certificate));
-        issuedCertificateRepository.save(new IssuedCertificate(certificate.getSerialNumber()));
+        issuedCertificateRepository.save(new IssuedCertificate(certificate.getSerialNumber(), certificationAuthority));
 
         return certificateAuthorityRepository.save(certificationAuthority).getId();
     }
