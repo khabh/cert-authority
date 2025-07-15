@@ -4,6 +4,7 @@ import com.example.ca.domain.CertificationAuthority;
 import com.example.ca.domain.DistinguishedName;
 import com.example.ca.domain.IssuedCertificate;
 import com.example.ca.domain.Policy;
+import com.example.ca.domain.RevocationReason;
 import com.example.ca.domain.repository.CertificateAuthorityRepository;
 import com.example.ca.domain.repository.IssuedCertificateRepository;
 import com.example.ca.domain.repository.PolicyRepository;
@@ -32,6 +33,7 @@ import java.security.Signature;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -194,10 +196,28 @@ public class CertificateService {
         BigInteger serial = new BigInteger(dto.serial().replaceFirst("^0x", ""), 16);
         IssuedCertificate issuedCertificate = issuedCertificateRepository.findBySerial(serial).orElseThrow();
 
-        issuedCertificate.revoke(dto.reason());
-
+        RevocationReason reason = dto.reason();
+        issuedCertificate.revoke(reason);
         certificateAuthorityRepository.findBySerial(serial)
-                                      .ifPresent(CertificationAuthority::inactive);
+                                      .ifPresent(certificationAuthority -> revokeCertificateAuthority(certificationAuthority, reason));
+    }
+
+    private void revokeCertificateAuthority(CertificationAuthority ca, RevocationReason reason) {
+        ca.inactive();
+        List<CertificationAuthority> subAuthorities = certificateAuthorityRepository.findAllDescendantsByIssuerId(ca.getId());
+        List<IssuedCertificate> issuedCertificates = subAuthorities.stream()
+                                                                   .map(issuedCertificateRepository::findAllByIssuer)
+                                                                   .flatMap(Collection::stream)
+                                                                   .collect(Collectors.toList());
+        issuedCertificates.addAll(issuedCertificateRepository.findAllByIssuer(ca));
+
+        if (reason.isRegenerateKey()) {
+            subAuthorities.forEach(CertificationAuthority::inactive);
+            issuedCertificates.forEach(issuedCertificate -> issuedCertificate.revokedByIssuer(reason));
+            return;
+        }
+
+        issuedCertificates.forEach(IssuedCertificate::suspend);
     }
 
     private void validateRootCertificationAuthority(X509Certificate certificate, PrivateKey privateKey) {

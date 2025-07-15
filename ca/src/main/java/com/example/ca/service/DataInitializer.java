@@ -34,7 +34,7 @@ class DataInitializer implements ApplicationRunner {
         LongStream.range(2, 4)
                   .mapToObj(number -> new SubCertificateIssueDto(
                       number,
-                      "second" + number,
+                      "cn" + (number + 2),
                       "organization" + number,
                       "unit" + number,
                       "Seoul",
@@ -45,7 +45,7 @@ class DataInitializer implements ApplicationRunner {
         LongStream.range(4, 6)
                   .mapToObj(number -> new SubCertificateIssueDto(
                       number,
-                      "third" + number,
+                      "cn" + (number + 2),
                       "organization" + number,
                       "unit" + number,
                       "Seoul",

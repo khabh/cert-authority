@@ -55,11 +55,28 @@ public class IssuedCertificate {
     }
 
     public void revoke(RevocationReason revokedReason) {
-        if (this.status == CertificateStatus.REVOKED) {
-            throw new CaException("이미 폐기된 인증서입니다.");
+        if (status == CertificateStatus.REVOKED) {
+            throw new CaException("Revoked revoked certificate");
         }
         this.status = CertificateStatus.REVOKED;
         this.revokedReason = revokedReason;
         this.revokedAt = LocalDateTime.now();
+    }
+
+    public void revokedByIssuer(RevocationReason reason) {
+        if (reason == RevocationReason.KEY_COMPROMISE) {
+            this.revokedReason = RevocationReason.KEY_COMPROMISE;
+        } else {
+            this.revokedReason = RevocationReason.CA_COMPROMISE;
+        }
+        this.status = CertificateStatus.REVOKED;
+        this.revokedAt = LocalDateTime.now();
+    }
+
+    public void suspend() {
+        if (status == CertificateStatus.REVOKED) {
+            return;
+        }
+        this.status = CertificateStatus.SUSPENDED;
     }
 }

@@ -6,7 +6,9 @@ import lombok.Getter;
 public enum RevocationReason {
     KEY_COMPROMISE(true),
     CESSATION_OF_OPERATION(false),
-    AFFILIATION_CHANGED(false);
+    AFFILIATION_CHANGED(false),
+    CA_COMPROMISE(false),
+    ;
 
     private final boolean regenerateKey;
 
