@@ -1,6 +1,7 @@
 package com.example.ca.service.dto;
 
 public record CertificateDto(
-    String certificate
+    String certificate,
+    String serial
 ) {
 }

@@ -1,5 +1,9 @@
 <div th:fragment="result">
   <h2>발급된 인증서</h2>
+  <p style="font-weight: bold; margin-bottom: 8px;">
+    인증서 일련번호 (Serial):
+    <span th:text="${serial}">123456789</span>
+  </p>
   <pre th:text="${certificate}"></pre>
   <div th:replace="fragments/download :: certDownloadButton(${certificate})"></div>
 </div>

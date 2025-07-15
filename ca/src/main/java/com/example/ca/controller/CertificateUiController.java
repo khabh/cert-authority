@@ -44,6 +44,8 @@ public class CertificateUiController {
     public String issueRootCaCert(@Valid RootCertificateIssueDto dto, Model model) {
         CertificateDto certificateDto = certificateService.issueRootCertificate(dto);
         model.addAttribute("certificate", certificateDto.certificate());
+        model.addAttribute("serial", certificateDto.serial());
+
         return "fragments/certificate :: result";
     }
 
@@ -51,6 +53,7 @@ public class CertificateUiController {
     public String issueSubCaCert(@Valid SubCertificateIssueDto dto, Model model) {
         CertificateDto certificateDto = certificateService.issueSubCertificate(dto);
         model.addAttribute("certificate", certificateDto.certificate());
+        model.addAttribute("serial", certificateDto.serial());
         return "fragments/certificate :: result";
     }
 
@@ -58,6 +61,8 @@ public class CertificateUiController {
     public String issueSubCaCert(@Valid @ModelAttribute SubCertificateIssueWithPolicyDto dto, Model model) {
         CertificateDto certificateDto = certificateService.issueSubCertificateWithPolicy(dto);
         model.addAttribute("certificate", certificateDto.certificate());
+        model.addAttribute("serial", certificateDto.serial());
+
         return "fragments/certificate :: result";
     }
 
@@ -91,6 +96,8 @@ public class CertificateUiController {
     public String issueCertificate(@Valid CertificateIssueDto certificateIssueDto, Model model) {
         CertificateDto certificateDto = certificateService.issueCertificate(certificateIssueDto);
         model.addAttribute("certificate", certificateDto.certificate());
+        model.addAttribute("serial", certificateDto.serial());
+
         return "fragments/certificate :: result";
     }
 

@@ -71,7 +71,7 @@ public class CertificateService {
         X509Certificate cert = certificateGenerator.generateCertificate(command);
         String certPem = PemUtil.toPem(cert);
         issuedCertificateRepository.save(new IssuedCertificate(cert.getSerialNumber().toString(16).toUpperCase(), ca));
-        return new CertificateDto(certPem);
+        return new CertificateDto(certPem, cert.getSerialNumber().toString(16).toUpperCase());
     }
 
     @Transactional
@@ -93,7 +93,7 @@ public class CertificateService {
         issuedCertificateRepository.save(new IssuedCertificate(certificate.getSerialNumber()
                                                                           .toString(16)
                                                                           .toUpperCase(), null));
-        return new CertificateDto(certificatePem);
+        return new CertificateDto(certificatePem, certificate.getSerialNumber().toString(16).toUpperCase());
     }
 
     @Transactional
@@ -126,7 +126,7 @@ public class CertificateService {
                                                                           .toString(16)
                                                                           .toUpperCase(), ca));
 
-        return new CertificateDto(certificatePem);
+        return new CertificateDto(certificatePem, certificate.getSerialNumber().toString(16).toUpperCase());
     }
 
     private List<Certificate> findActiveIssuerChain(CertificationAuthority ca) {
