@@ -1,5 +1,6 @@
 package com.example.ca.service;
 
+import com.example.ca.domain.CertificateStatus;
 import com.example.ca.domain.CertificationAuthority;
 import com.example.ca.domain.DistinguishedName;
 import com.example.ca.domain.IssuedCertificate;
@@ -21,7 +22,6 @@ import com.example.ca.service.dto.SubCertificateIssueDto;
 import com.example.ca.service.dto.SubCertificateIssueWithPolicyDto;
 import com.example.ca.util.CertificateUtil;
 import com.example.ca.util.PemUtil;
-import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.KeyPair;
@@ -70,7 +70,7 @@ public class CertificateService {
         CertificateGenerateCommand command = createCommand(certificateIssueDto, ca, csr);
         X509Certificate cert = certificateGenerator.generateCertificate(command);
         String certPem = PemUtil.toPem(cert);
-        issuedCertificateRepository.save(new IssuedCertificate(cert.getSerialNumber(), ca));
+        issuedCertificateRepository.save(new IssuedCertificate(cert.getSerialNumber().toString(16).toUpperCase(), ca));
         return new CertificateDto(certPem);
     }
 
@@ -86,9 +86,13 @@ public class CertificateService {
 
         String alias = keyStoreManager.setRootKeyEntry(keyPair.getPrivate(), certificate);
         String certificatePem = PemUtil.toPem(certificate);
-        CertificationAuthority certificationAuthority = CertificationAuthority.withAlias(distinguishedName, alias, certificate.getSerialNumber(), null, certificatePem);
+        CertificationAuthority certificationAuthority = CertificationAuthority.withAlias(distinguishedName, alias, certificate.getSerialNumber()
+                                                                                                                              .toString(16)
+                                                                                                                              .toUpperCase(), null, certificatePem);
         certificateAuthorityRepository.save(certificationAuthority);
-        issuedCertificateRepository.save(new IssuedCertificate(certificate.getSerialNumber(), null));
+        issuedCertificateRepository.save(new IssuedCertificate(certificate.getSerialNumber()
+                                                                          .toString(16)
+                                                                          .toUpperCase(), null));
         return new CertificateDto(certificatePem);
     }
 
@@ -114,9 +118,13 @@ public class CertificateService {
 
         String alias = keyStoreManager.setSubKeyEntry(keyPair.getPrivate(), chain.toArray(Certificate[]::new));
         String certificatePem = PemUtil.toPem(certificate);
-        CertificationAuthority subCa = CertificationAuthority.withAlias(subjectDn, alias, certificate.getSerialNumber(), ca, certificatePem);
+        CertificationAuthority subCa = CertificationAuthority.withAlias(subjectDn, alias, certificate.getSerialNumber()
+                                                                                                     .toString(16)
+                                                                                                     .toUpperCase(), ca, certificatePem);
         certificateAuthorityRepository.save(subCa);
-        issuedCertificateRepository.save(new IssuedCertificate(certificate.getSerialNumber(), ca));
+        issuedCertificateRepository.save(new IssuedCertificate(certificate.getSerialNumber()
+                                                                          .toString(16)
+                                                                          .toUpperCase(), ca));
 
         return new CertificateDto(certificatePem);
     }
@@ -158,9 +166,13 @@ public class CertificateService {
         DistinguishedName distinguishedName = DistinguishedName.from(certificate.getIssuerX500Principal().getName());
         validateCaUnique(distinguishedName);
         String alias = keyStoreManager.setRootKeyEntry(privateKey, certificate);
-        CertificationAuthority certificationAuthority = CertificationAuthority.withAlias(distinguishedName, alias, certificate.getSerialNumber(), null, PemUtil.toPem(certificate));
+        CertificationAuthority certificationAuthority = CertificationAuthority.withAlias(distinguishedName, alias, certificate.getSerialNumber()
+                                                                                                                              .toString(16)
+                                                                                                                              .toUpperCase(), null, PemUtil.toPem(certificate));
         certificateAuthorityRepository.save(certificationAuthority);
-        issuedCertificateRepository.save(new IssuedCertificate(certificate.getSerialNumber(), null));
+        issuedCertificateRepository.save(new IssuedCertificate(certificate.getSerialNumber()
+                                                                          .toString(16)
+                                                                          .toUpperCase(), null));
 
         return certificationAuthority.getId();
     }
@@ -196,12 +208,11 @@ public class CertificateService {
 
     @Transactional
     public void revokeCertificate(CertificateRevokeDto dto) {
-        BigInteger serial = new BigInteger(dto.serial().replaceFirst("^0x", ""), 16);
-        IssuedCertificate issuedCertificate = issuedCertificateRepository.findBySerial(serial).orElseThrow();
+        IssuedCertificate issuedCertificate = issuedCertificateRepository.findBySerial(dto.serial()).orElseThrow();
 
         RevocationReason reason = dto.reason();
         issuedCertificate.revoke(reason);
-        certificateAuthorityRepository.findBySerial(serial)
+        certificateAuthorityRepository.findBySerial(dto.serial())
                                       .ifPresent(certificationAuthority -> revokeCertificateAuthority(certificationAuthority, reason));
     }
 
@@ -227,8 +238,10 @@ public class CertificateService {
                 keyPair,
                 365
             ));
-            ca.active(PemUtil.toPem(renew), renew.getSerialNumber());
-            issuedCertificateRepository.save(new IssuedCertificate(renew.getSerialNumber(), null));
+            ca.active(PemUtil.toPem(renew), renew.getSerialNumber().toString(16).toUpperCase());
+            issuedCertificateRepository.save(new IssuedCertificate(renew.getSerialNumber()
+                                                                        .toString(16)
+                                                                        .toUpperCase(), null));
             renewCertificateAuthorityWithoutKey(ca, new Certificate[]{});
         } else {
             CertificationAuthority issuer = certificateAuthorityRepository.findById(ca.getIssuerId()).orElseThrow();
@@ -240,8 +253,10 @@ public class CertificateService {
                 keyStoreManager.getPrivateKey(issuer.getAlias()),
                 365
             ));
-            ca.active(PemUtil.toPem(renew), renew.getSerialNumber());
-            issuedCertificateRepository.save(new IssuedCertificate(renew.getSerialNumber(), issuer));
+            ca.active(PemUtil.toPem(renew), renew.getSerialNumber().toString(16).toUpperCase());
+            issuedCertificateRepository.save(new IssuedCertificate(renew.getSerialNumber()
+                                                                        .toString(16)
+                                                                        .toUpperCase(), issuer));
 
             renewCertificateAuthorityWithoutKey(ca, findActiveIssuerChain(ca).toArray(Certificate[]::new));
         }
@@ -254,6 +269,8 @@ public class CertificateService {
         ).toArray(Certificate[]::new);
 
         issuedCertificateRepository.findAllByIssuer(ca)
+                                   .stream()
+                                   .filter(issuedCertificate -> issuedCertificate.getStatus() != CertificateStatus.REVOKED)
                                    .forEach(IssuedCertificate::resume);
 
         String alias = keyStoreManager.setKeyEntry(keyStoreManager.getPrivateKey(ca.getAlias()), currentChain, ca.getType());
@@ -272,8 +289,10 @@ public class CertificateService {
                 365
             ));
             String alias = keyStoreManager.setRootKeyEntry(keyPair.getPrivate(), certificate);
-            ca.renew(alias, PemUtil.toPem(certificate), certificate.getSerialNumber());
-            issuedCertificateRepository.save(new IssuedCertificate(certificate.getSerialNumber(), ca));
+            ca.renew(alias, PemUtil.toPem(certificate), certificate.getSerialNumber().toString(16).toUpperCase());
+            issuedCertificateRepository.save(new IssuedCertificate(certificate.getSerialNumber()
+                                                                              .toString(16)
+                                                                              .toUpperCase(), null));
             certificateAuthorityRepository.findAllByIssuer(ca)
                                           .forEach(sub -> renewCertificateAuthorityByKey(sub, new Certificate[]{certificate}));
         } else {
@@ -282,13 +301,12 @@ public class CertificateService {
     }
 
     private void renewCertificateAuthorityByKey(CertificationAuthority ca, Certificate[] certificates) {
-        KeyPair keyPair = keyPairGenerator.generateKeyPair();
-
+        PublicKey publicKey = CertificateUtil.getCertificate(ca.getCertificate()).getPublicKey();
         CertificationAuthority issuer = ca.getIssuer();
         X509Certificate certificate = certificateGenerator.generateCertificate(new CertificateGenerateCommand(
             issuer.getX500Name(),
             ca.getX500Name(),
-            keyPair.getPublic(),
+            publicKey,
             keyStoreManager.getPrivateKey(issuer.getAlias()),
             365
         ));
@@ -297,9 +315,10 @@ public class CertificateService {
             Stream.of(certificate),
             Arrays.stream(certificates)
         ).toArray(Certificate[]::new);
-        String alias = keyStoreManager.setSubKeyEntry(keyPair.getPrivate(), currentChain);
-        ca.renew(alias, PemUtil.toPem(certificate), certificate.getSerialNumber());
-        issuedCertificateRepository.save(new IssuedCertificate(certificate.getSerialNumber(), issuer));
+        ca.renew(PemUtil.toPem(certificate), certificate.getSerialNumber().toString(16).toUpperCase());
+        issuedCertificateRepository.save(new IssuedCertificate(certificate.getSerialNumber()
+                                                                          .toString(16)
+                                                                          .toUpperCase(), issuer));
         certificateAuthorityRepository.findAllByIssuer(ca)
                                       .forEach(sub -> renewCertificateAuthorityByKey(sub, currentChain));
     }
@@ -314,12 +333,10 @@ public class CertificateService {
         issuedCertificates.addAll(issuedCertificateRepository.findAllByIssuer(ca));
 
         if (reason.isRegenerateKey()) {
-            subAuthorities.forEach(CertificationAuthority::inactive);
             issuedCertificates.forEach(issuedCertificate -> issuedCertificate.revokedByIssuer(reason));
-            return;
+        } else {
+            issuedCertificates.forEach(IssuedCertificate::suspend);
         }
-
-        issuedCertificates.forEach(IssuedCertificate::suspend);
     }
 
     private void validateRootCertificationAuthority(X509Certificate certificate, PrivateKey privateKey) {

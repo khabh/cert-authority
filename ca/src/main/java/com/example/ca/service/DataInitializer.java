@@ -6,11 +6,13 @@ import com.example.ca.service.dto.SubCertificateIssueDto;
 import java.util.stream.IntStream;
 import java.util.stream.LongStream;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
+@Slf4j
 @Component
 @Profile("local")
 @RequiredArgsConstructor
@@ -62,5 +64,6 @@ class DataInitializer implements ApplicationRunner {
                       "AU"
                   ))
                   .forEach(policyService::createPolicy);
+        log.info("Data Initialized successfully");
     }
 }

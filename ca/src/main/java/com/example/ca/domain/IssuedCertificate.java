@@ -12,7 +12,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
-import java.math.BigInteger;
 import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -32,7 +31,7 @@ public class IssuedCertificate {
 
     @NotNull
     @Column(name = "serial", unique = true, nullable = false)
-    private BigInteger serial;
+    private String serial;
 
     @NotNull
     @Enumerated(EnumType.STRING)
@@ -47,7 +46,7 @@ public class IssuedCertificate {
 
     private LocalDateTime revokedAt;
 
-    public IssuedCertificate(BigInteger serial, CertificationAuthority issuer) {
+    public IssuedCertificate(String serial, CertificationAuthority issuer) {
         this.serial = serial;
         this.issuer = issuer;
         this.status = CertificateStatus.GOOD;

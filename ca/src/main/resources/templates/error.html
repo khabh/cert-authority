@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"/>
+  <title>오류 발생</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f9f9f9;
+      color: #333;
+      padding: 40px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .error-box {
+      background: #fff0f0;
+      border: 1px solid #d32f2f;
+      border-radius: 8px;
+      padding: 20px;
+      color: #d32f2f;
+      font-size: 1.2em;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+<h1>⚠️ 오류가 발생했습니다</h1>
+
+<!-- 쿼리 파라미터 또는 Model에서 message 출력 -->
+<div class="error-box" th:text="${message != null} ? ${message} : ${param.message}">
+  알 수 없는 오류가 발생했습니다.
+</div>
+
+<p><a href="/" style="color:#1565c0; text-decoration:none;">홈으로 돌아가기</a></p>
+</body>
+</html>

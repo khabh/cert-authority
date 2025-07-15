@@ -13,7 +13,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.validation.constraints.NotNull;
-import java.math.BigInteger;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -36,15 +35,12 @@ public class CertificationAuthority {
     private String alias;
 
     @Column(name = "serial")
-    private BigInteger serial;
+    private String serial;
 
     @NotNull
     @Column(name = "dn", nullable = false, unique = true)
     @Convert(converter = DistinguishedNameConverter.class)
     private DistinguishedName distinguishedName;
-
-    @Column(name = "sk", length = 4000)
-    private String secretKey;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "issuer_id")
@@ -59,16 +55,11 @@ public class CertificationAuthority {
     public static CertificationAuthority withAlias(
         DistinguishedName distinguishedName,
         String alias,
-        BigInteger serial,
+        String serial,
         CertificationAuthority issuer,
         String certificate) {
-        return new CertificationAuthority(null, alias, serial, distinguishedName, null, issuer, certificate, CaStatus.ACTIVE);
+        return new CertificationAuthority(null, alias, serial, distinguishedName, issuer, certificate, CaStatus.ACTIVE);
     }
-
-    public CertificationAuthority(DistinguishedName distinguishedName, String secretKey, String certificate) {
-        this(null, null, null, distinguishedName, secretKey, null, certificate, CaStatus.ACTIVE);
-    }
-
 
     public X500Name getX500Name() {
         return distinguishedName.toX500Name();
@@ -108,22 +99,24 @@ public class CertificationAuthority {
         this.status = CaStatus.INACTIVE;
     }
 
-    public String getHexSerial() {
-        return serial.toString(16).toUpperCase();
-    }
-
     public boolean isInactive() {
         return this.status == CaStatus.INACTIVE;
     }
 
-    public void renew(String alias, String certificate, BigInteger serial) {
+    public void renew(String certificate, String serial) {
+        this.certificate = certificate;
+        this.status = CaStatus.ACTIVE;
+        this.serial = serial;
+    }
+
+    public void renew(String alias, String certificate, String serial) {
         this.alias = alias;
         this.certificate = certificate;
         this.status = CaStatus.ACTIVE;
         this.serial = serial;
     }
 
-    public void active(String certificate, BigInteger serial) {
+    public void active(String certificate, String serial) {
         this.certificate = certificate;
         this.serial = serial;
         this.status = CaStatus.ACTIVE;

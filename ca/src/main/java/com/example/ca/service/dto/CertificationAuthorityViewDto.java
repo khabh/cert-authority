@@ -17,7 +17,7 @@ public record CertificationAuthorityViewDto(
             certificationAuthority.getId(),
             certificationAuthority.getCommonName(),
             certificationAuthority.getRawName(),
-            certificationAuthority.getHexSerial(),
+            certificationAuthority.getSerial(),
             certificationAuthority.getCertificate(),
             certificationAuthority.getStatus()
         );

@@ -2,7 +2,6 @@ package com.example.ca.domain.repository;
 
 import com.example.ca.domain.CertificationAuthority;
 import com.example.ca.domain.DistinguishedName;
-import java.math.BigInteger;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -15,16 +14,16 @@ public interface CertificateAuthorityRepository extends JpaRepository<Certificat
 
     boolean existsByDistinguishedName(DistinguishedName distinguishedName);
 
-    Optional<CertificationAuthority> findBySerial(BigInteger serial);
+    Optional<CertificationAuthority> findBySerial(String serial);
 
     @Query(
         value = """
-                WITH RECURSIVE ca_hierarchy(id, alias, serial, dn, sk, issuer_id, certificate, status) AS (
-                  SELECT id, alias, serial, dn, sk, issuer_id, certificate, status
+                WITH RECURSIVE ca_hierarchy(id, alias, serial, dn, issuer_id, certificate, status) AS (
+                  SELECT id, alias, serial, dn, issuer_id, certificate, status
                   FROM certification_authority
                   WHERE id = :issuerId
                   UNION ALL
-                  SELECT ca.id, ca.alias, ca.serial, ca.dn, ca.sk, ca.issuer_id, ca.certificate, ca.status
+                  SELECT ca.id, ca.alias, ca.serial, ca.dn, ca.issuer_id, ca.certificate, ca.status
                   FROM certification_authority ca
                   JOIN ca_hierarchy parent ON ca.issuer_id = parent.id
                 )
