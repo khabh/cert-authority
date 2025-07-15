@@ -11,6 +11,7 @@ import com.example.ca.exception.CaException;
 import com.example.ca.service.command.CertificateGenerateCommand;
 import com.example.ca.service.dto.CertificateDto;
 import com.example.ca.service.dto.CertificateIssueDto;
+import com.example.ca.service.dto.CertificateRevokeDto;
 import com.example.ca.service.dto.CertificationAuthorityTreeDto;
 import com.example.ca.service.dto.CertificationAuthorityViewDto;
 import com.example.ca.service.dto.RootCertificateIssueDto;
@@ -19,6 +20,7 @@ import com.example.ca.service.dto.SubCertificateIssueDto;
 import com.example.ca.service.dto.SubCertificateIssueWithPolicyDto;
 import com.example.ca.util.CertificateUtil;
 import com.example.ca.util.PemUtil;
+import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.KeyPair;
@@ -103,7 +105,7 @@ public class CertificateService {
         );
 
         X509Certificate certificate = certificateGenerator.generateCertificate(command);
-        List<Certificate> chain = findIssuerChain(ca);
+        List<Certificate> chain = findActiveIssuerChain(ca);
         chain.addFirst(certificate);
 
         String alias = keyStoreManager.setSubKeyEntry(keyPair.getPrivate(), chain.toArray(Certificate[]::new));
@@ -115,9 +117,14 @@ public class CertificateService {
         return new CertificateDto(certificatePem);
     }
 
-    private List<Certificate> findIssuerChain(CertificationAuthority ca) {
+    private List<Certificate> findActiveIssuerChain(CertificationAuthority ca) {
         List<Certificate> chain = Stream.iterate(ca, Objects::nonNull, CertificationAuthority::getIssuer)
-                                        .map(caEntry -> CertificateUtil.getCertificate(caEntry.getCertificate()))
+                                        .map(certificationAuthority -> {
+                                            if (certificationAuthority.isInactive()) {
+                                                throw new CaException("상위 CA가 비활성화되어 발급이 제한됩니다.");
+                                            }
+                                            return CertificateUtil.getCertificate(certificationAuthority.getCertificate());
+                                        })
                                         .collect(Collectors.toCollection(ArrayList::new));
         Collections.reverse(chain);
 
@@ -180,6 +187,17 @@ public class CertificateService {
         );
 
         return issueSubCertificate(subCertificateIssueDto);
+    }
+
+    @Transactional
+    public void revokeCertificate(CertificateRevokeDto dto) {
+        BigInteger serial = new BigInteger(dto.serial().replaceFirst("^0x", ""), 16);
+        IssuedCertificate issuedCertificate = issuedCertificateRepository.findBySerial(serial).orElseThrow();
+
+        issuedCertificate.revoke(dto.reason());
+
+        certificateAuthorityRepository.findBySerial(serial)
+                                      .ifPresent(CertificationAuthority::inactive);
     }
 
     private void validateRootCertificationAuthority(X509Certificate certificate, PrivateKey privateKey) {

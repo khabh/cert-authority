@@ -3,6 +3,7 @@ package com.example.ca.controller;
 import com.example.ca.service.CertificateService;
 import com.example.ca.service.dto.CertificateDto;
 import com.example.ca.service.dto.CertificateIssueDto;
+import com.example.ca.service.dto.CertificateRevokeDto;
 import com.example.ca.service.dto.CertificationAuthorityTreeDto;
 import com.example.ca.service.dto.CertificationAuthorityViewDto;
 import com.example.ca.service.dto.RootCertificateIssueDto;
@@ -123,5 +124,17 @@ public class CertificateUiController {
             return FileContentExtractor.extractContent(file);
         }
         throw new IllegalArgumentException(name + " 입력이 필요합니다.");
+    }
+
+    @PostMapping("/certificates/revoke")
+    public String revokeCertificate(@Valid CertificateRevokeDto dto) {
+        certificateService.revokeCertificate(dto);
+
+        return "redirect:/dashboard";
+    }
+
+    @GetMapping("/certificates/revoke")
+    public String showRevokeForm() {
+        return "certificate-revoke";
     }
 }

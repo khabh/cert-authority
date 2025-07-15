@@ -5,6 +5,7 @@
   <ul th:if="${children != null and !children.isEmpty()}">
     <li th:each="child : ${children}">
       <div class="ca-node"
+           th:classappend="${child.status == T(com.example.ca.domain.CaStatus).INACTIVE} ? ' inactive' : ''"
            th:attr="hx-get=@{/ca/{id}(id=${child.id})}"
            hx-target="#ca-modal-content"
            hx-swap="innerHTML"

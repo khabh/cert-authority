@@ -1,5 +1,6 @@
 package com.example.ca.service.dto;
 
+import com.example.ca.domain.CaStatus;
 import com.example.ca.domain.CaType;
 import com.example.ca.domain.CertificationAuthority;
 import java.util.Collections;
@@ -10,6 +11,7 @@ public record CertificationAuthorityTreeDto(
     Long id,
     String commonName,
     CaType type,
+    CaStatus status,
     List<CertificationAuthorityTreeDto> children
 ) {
 
@@ -23,6 +25,7 @@ public record CertificationAuthorityTreeDto(
             ca.getId(),
             ca.getCommonName(),
             ca.getType(),
+            ca.getStatus(),
             children.stream()
                     .map(child -> CertificationAuthorityTreeDto.from(child, childMap))
                     .toList()

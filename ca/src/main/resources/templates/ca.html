@@ -24,6 +24,12 @@
       </p>
 
       <p style="font-size:1em; color:#333; margin:12px 0;">
+        <strong style="font-weight:700; color:#1565c0; min-width:140px; display:inline-block;">Serial
+          :</strong>
+        <span th:text="${ca.serialNumber}">12345555555</span>
+      </p>
+
+      <p style="font-size:1em; color:#333; margin:12px 0;">
         <strong style="font-weight:700; color:#1565c0;">Certificate:</strong>
       </p>
 
@@ -31,17 +37,42 @@
           style="background:#f5f7fa; border:1px solid #d6dae3; border-radius:8px; padding:16px; font-family:'Courier New', Courier, monospace; font-size:0.9em; white-space:pre-wrap; word-break:break-all; max-height:200px; overflow-y:auto; margin-top:8px;"
           th:text="${ca.certificate}">-----BEGIN CERTIFICATE-----</pre>
 
+      <style>
+        .btn-disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        .warn-box {
+          background: #fff0f0;
+          color: #d32f2f;
+          border-left: 4px solid #d32f2f;
+          padding: 12px;
+          font-size: 0.9em;
+          margin-top: 16px;
+          border-radius: 6px;
+        }
+      </style>
+
       <button
           style="background:#1565c0; color:#fff; border:none; border-radius:8px; padding:12px 24px; font-size:1em; cursor:pointer; margin-right:16px; transition: background-color 0.3s ease;"
-          th:onclick="|location.href='/certificates/sub/create?issuerId=${ca.id}'|">서브 CA 인증서 발급
+          th:classappend="${ca.status.name() == 'INACTIVE'} ? 'btn-disabled'"
+          th:onclick="|location.href='/certificates/sub/create?issuerId=${ca.id}'|"
+          th:disabled="${ca.status.name() == 'INACTIVE'}">서브 CA 인증서 발급
       </button>
 
       <button
           style="background:#1565c0; color:#fff; border:none; border-radius:8px; padding:12px 24px; font-size:1em; cursor:pointer; transition: background-color 0.3s ease;"
-          th:onclick="|location.href='/certificates/leaf/create?issuerId=${ca.id}'|">리프 인증서 발급
+          th:classappend="${ca.status.name() == 'INACTIVE'} ? 'btn-disabled'"
+          th:onclick="|location.href='/certificates/leaf/create?issuerId=${ca.id}'|"
+          th:disabled="${ca.status.name() == 'INACTIVE'}">리프 인증서 발급
       </button>
 
-      <div th:replace="fragments/download :: certDownloadButton(${ca.certificate})"></div>
+      <div th:replace="~{fragments/download :: certDownloadButton(${ca.certificate})}"></div>
+
+      <div th:if="${ca.status.name() == 'INACTIVE'}" class="warn-box">
+        ⚠ 현재 이 인증서는 <strong>비활성화</strong> 상태입니다. 새로운 인증서를 발급할 수 없습니다.
+      </div>
     </div>
   </div>
 </th:block>

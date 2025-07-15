@@ -31,7 +31,12 @@ public class KeyStoreManager {
 
     public String setKeyEntry(PrivateKey privateKey, Certificate[] chain, CaType caType) {
         String alias = generateAlias(caType);
+        setKeyEntry(alias, privateKey, chain);
 
+        return alias;
+    }
+
+    public void setKeyEntry(String alias, PrivateKey privateKey, Certificate[] chain) {
         try {
             keyStore.setKeyEntry(
                 alias,
@@ -42,8 +47,6 @@ public class KeyStoreManager {
         } catch (KeyStoreException e) {
             throw new CaException("key 저장에 실패했습니다.");
         }
-
-        return alias;
     }
 
     public PrivateKey getPrivateKey(String alias) {

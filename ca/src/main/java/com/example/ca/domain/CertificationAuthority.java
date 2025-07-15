@@ -101,4 +101,16 @@ public class CertificationAuthority {
         }
         return issuer.getId();
     }
+
+    public void inactive() {
+        this.status = CaStatus.INACTIVE;
+    }
+
+    public String getHexSerial() {
+        return serial.toString(16).toUpperCase();
+    }
+
+    public boolean isInactive() {
+        return this.status == CaStatus.INACTIVE;
+    }
 }

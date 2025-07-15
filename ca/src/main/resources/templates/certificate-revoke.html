@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>인증서 폐기</title>
+  <script src="https://unpkg.com/htmx.org@1.9.2"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f9fafb;
+      color: #333;
+      margin: 0;
+    }
+
+    .con {
+      padding-left: 240px;
+      padding-top: 40px;
+    }
+
+    .form-container {
+      background: #fff;
+      padding: 24px 32px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .form-container h1 {
+      margin-bottom: 24px;
+      color: #c62828;
+      font-weight: 700;
+      font-size: 1.8em;
+    }
+
+    .form-container label {
+      display: block;
+      margin-bottom: 16px;
+      font-size: 1em;
+    }
+
+    .form-container input[type="text"],
+    .form-container select {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      margin-top: 6px;
+      font-size: 1em;
+      box-sizing: border-box;
+    }
+
+    .form-container button[type="submit"] {
+      background: #c62828;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 24px;
+      font-size: 1em;
+      cursor: pointer;
+      margin-top: 16px;
+      transition: background-color 0.3s ease;
+    }
+
+    .form-container button[type="submit"]:hover {
+      background: #8e0000;
+    }
+
+    #result {
+      margin-top: 24px;
+    }
+  </style>
+</head>
+<body>
+<div th:replace="fragments/nav :: navigation"></div>
+<div class="con">
+  <div class="form-container">
+    <h1>인증서 폐기</h1>
+
+    <form id="revoke-form"
+          th:action="@{/certificates/revoke}"
+          method="post">
+      <label>Serial Number (Hex):
+        <input type="text" name="serial" placeholder="예: 281C830D146F8355" required>
+      </label>
+
+      <label>폐기 사유 (선택):
+        <select name="reason" required>
+          <option value="" disabled selected>-- 선택하세요 --</option>
+          <option value="KEY_COMPROMISE">Key Compromise</option>
+          <option value="CESSATION_OF_OPERATION">Cessation of Operation</option>
+          <option value="AFFILIATION_CHANGED">Affiliation Changed</option>
+        </select>
+      </label>
+
+      <button type="submit">폐기 요청</button>
+    </form>
+
+  </div>
+</div>
+</body>
+</html>
