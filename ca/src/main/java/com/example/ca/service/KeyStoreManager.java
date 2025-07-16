@@ -110,4 +110,12 @@ public class KeyStoreManager {
             throw new RuntimeException("Failed to remove all entries from KeyStore", e);
         }
     }
+
+    public void remove(String alias) {
+        try {
+            keyStore.deleteEntry(alias);
+        } catch (KeyStoreException e) {
+            throw new CaException("Failed to remove key entry", e);
+        }
+    }
 }

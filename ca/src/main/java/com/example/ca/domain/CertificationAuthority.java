@@ -103,12 +103,6 @@ public class CertificationAuthority {
         return this.status == CaStatus.INACTIVE;
     }
 
-    public void renew(String certificate, String serial) {
-        this.certificate = certificate;
-        this.status = CaStatus.ACTIVE;
-        this.serial = serial;
-    }
-
     public void renew(String alias, String certificate, String serial) {
         this.alias = alias;
         this.certificate = certificate;
@@ -116,7 +110,8 @@ public class CertificationAuthority {
         this.serial = serial;
     }
 
-    public void active(String certificate, String serial) {
+    public void active(String alias, String certificate, String serial) {
+        this.alias = alias;
         this.certificate = certificate;
         this.serial = serial;
         this.status = CaStatus.ACTIVE;

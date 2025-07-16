@@ -131,6 +131,8 @@ public class CertificateService {
 
     private List<Certificate> findActiveIssuerChain(CertificationAuthority ca) {
         List<Certificate> chain = Stream.iterate(ca, Objects::nonNull, CertificationAuthority::getIssuer)
+                                        .filter(certificationAuthority -> !certificationAuthority.getId()
+                                                                                                 .equals(ca.getId()))
                                         .map(certificationAuthority -> {
                                             if (certificationAuthority.isInactive()) {
                                                 throw new CaException("상위 CA가 비활성화되어 발급이 제한됩니다.");
@@ -229,7 +231,12 @@ public class CertificateService {
             renewCertificateAuthorityByKey(ca);
             return;
         }
+        renewCertificateAuthorityWithoutKey(ca);
+    }
 
+    private void renewCertificateAuthorityWithoutKey(CertificationAuthority ca) {
+        // 최상위 ca만 인증서 재발급 (key는 그대로 유지)
+        // 하위 ca는 재발급 없이 hsm만 업데이트
         if (ca.isRoot()) {
             X509Certificate certificate = CertificateUtil.getCertificate(ca.getCertificate());
             KeyPair keyPair = new KeyPair(certificate.getPublicKey(), keyStoreManager.getPrivateKey(ca.getAlias()));
@@ -238,11 +245,18 @@ public class CertificateService {
                 keyPair,
                 365
             ));
-            ca.active(PemUtil.toPem(renew), renew.getSerialNumber().toString(16).toUpperCase());
+            String alias = keyStoreManager.setRootKeyEntry(keyPair.getPrivate(), renew);
+            ca.active(alias, PemUtil.toPem(renew), renew.getSerialNumber().toString(16).toUpperCase());
             issuedCertificateRepository.save(new IssuedCertificate(renew.getSerialNumber()
                                                                         .toString(16)
                                                                         .toUpperCase(), null));
-            renewCertificateAuthorityWithoutKey(ca, new Certificate[]{});
+            issuedCertificateRepository.findAllByIssuer(ca)
+                                       .stream()
+                                       .filter(issuedCertificate -> issuedCertificate.getStatus() != CertificateStatus.REVOKED)
+                                       .forEach(IssuedCertificate::resume);
+            Certificate[] currentChain = new Certificate[]{renew};
+            certificateAuthorityRepository.findAllByIssuer(ca)
+                                          .forEach(sub -> renewCertificateAuthorityWithoutKey(sub, currentChain));
         } else {
             CertificationAuthority issuer = certificateAuthorityRepository.findById(ca.getIssuerId()).orElseThrow();
             X509Certificate certificate = CertificateUtil.getCertificate(ca.getCertificate());
@@ -253,12 +267,22 @@ public class CertificateService {
                 keyStoreManager.getPrivateKey(issuer.getAlias()),
                 365
             ));
-            ca.active(PemUtil.toPem(renew), renew.getSerialNumber().toString(16).toUpperCase());
+            Certificate[] currentChain = Stream.concat(
+                Stream.of(renew),
+                Arrays.stream(findActiveIssuerChain(ca).toArray(Certificate[]::new))
+            ).toArray(Certificate[]::new);
+            String alias = keyStoreManager.setSubKeyEntry(keyStoreManager.getPrivateKey(ca.getAlias()), currentChain);
+            ca.active(alias, PemUtil.toPem(renew), renew.getSerialNumber().toString(16).toUpperCase());
+            issuedCertificateRepository.findAllByIssuer(ca)
+                                       .stream()
+                                       .filter(issuedCertificate -> issuedCertificate.getStatus() != CertificateStatus.REVOKED)
+                                       .forEach(IssuedCertificate::resume);
             issuedCertificateRepository.save(new IssuedCertificate(renew.getSerialNumber()
                                                                         .toString(16)
                                                                         .toUpperCase(), issuer));
 
-            renewCertificateAuthorityWithoutKey(ca, findActiveIssuerChain(ca).toArray(Certificate[]::new));
+            certificateAuthorityRepository.findAllByIssuer(ca)
+                                          .forEach(sub -> renewCertificateAuthorityWithoutKey(sub, currentChain));
         }
     }
 
@@ -273,7 +297,7 @@ public class CertificateService {
                                    .filter(issuedCertificate -> issuedCertificate.getStatus() != CertificateStatus.REVOKED)
                                    .forEach(IssuedCertificate::resume);
 
-        String alias = keyStoreManager.setKeyEntry(keyStoreManager.getPrivateKey(ca.getAlias()), currentChain, ca.getType());
+        String alias = keyStoreManager.setKeyEntry(keyStoreManager.getPrivateKey(ca.getAlias()), currentChain, ca.getType()); // Key 재발급 X
         keyStoreManager.removeKeyEntry(ca.getAlias());
         ca.setAlias(alias);
         certificateAuthorityRepository.findAllByIssuer(ca)
@@ -281,6 +305,8 @@ public class CertificateService {
     }
 
     private void renewCertificateAuthorityByKey(CertificationAuthority ca) {
+        // 루트(최상위 ca) 키 및 인증서 재발급
+        // 아래 모든 ca 인증서 재발급 (key는 유지)
         if (ca.isRoot()) {
             KeyPair keyPair = keyPairGenerator.generateKeyPair();
             X509Certificate certificate = certificateGenerator.generateCertificate(CertificateGenerateCommand.ofSelfSign(
@@ -288,6 +314,7 @@ public class CertificateService {
                 keyPair,
                 365
             ));
+            keyStoreManager.remove(ca.getAlias());
             String alias = keyStoreManager.setRootKeyEntry(keyPair.getPrivate(), certificate);
             ca.renew(alias, PemUtil.toPem(certificate), certificate.getSerialNumber().toString(16).toUpperCase());
             issuedCertificateRepository.save(new IssuedCertificate(certificate.getSerialNumber()
@@ -296,7 +323,28 @@ public class CertificateService {
             certificateAuthorityRepository.findAllByIssuer(ca)
                                           .forEach(sub -> renewCertificateAuthorityByKey(sub, new Certificate[]{certificate}));
         } else {
-            renewCertificateAuthorityByKey(ca, findActiveIssuerChain(ca).toArray(Certificate[]::new));
+            CertificationAuthority issuer = certificateAuthorityRepository.findById(ca.getIssuerId()).orElseThrow();
+            KeyPair keyPair = keyPairGenerator.generateKeyPair();
+            X509Certificate certificate = certificateGenerator.generateCertificate(new CertificateGenerateCommand(
+                issuer.getX500Name(),
+                ca.getX500Name(),
+                keyPair.getPublic(),
+                keyStoreManager.getPrivateKey(issuer.getAlias()),
+                365
+            ));
+            keyStoreManager.remove(ca.getAlias());
+            Certificate[] currentChain = Stream.concat(
+                Stream.of(certificate),
+                Arrays.stream(findActiveIssuerChain(ca).toArray(Certificate[]::new))
+            ).toArray(Certificate[]::new);
+            String alias = keyStoreManager.setSubKeyEntry(keyPair.getPrivate(), currentChain);
+            ca.renew(alias, PemUtil.toPem(certificate), certificate.getSerialNumber().toString(16).toUpperCase());
+            issuedCertificateRepository.save(new IssuedCertificate(certificate.getSerialNumber()
+                                                                              .toString(16)
+                                                                              .toUpperCase(), issuer));
+
+            certificateAuthorityRepository.findAllByIssuer(ca)
+                                          .forEach(sub -> renewCertificateAuthorityByKey(sub, new Certificate[]{certificate}));
         }
     }
 
@@ -315,7 +363,8 @@ public class CertificateService {
             Stream.of(certificate),
             Arrays.stream(certificates)
         ).toArray(Certificate[]::new);
-        ca.renew(PemUtil.toPem(certificate), certificate.getSerialNumber().toString(16).toUpperCase());
+        String alias = keyStoreManager.setSubKeyEntry(keyStoreManager.getPrivateKey(ca.getAlias()), currentChain);
+        ca.renew(alias, PemUtil.toPem(certificate), certificate.getSerialNumber().toString(16).toUpperCase());
         issuedCertificateRepository.save(new IssuedCertificate(certificate.getSerialNumber()
                                                                           .toString(16)
                                                                           .toUpperCase(), issuer));
