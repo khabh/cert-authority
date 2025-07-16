@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"/>
+  <title>OCSP 상태 조회</title>
+  <script src="https://unpkg.com/htmx.org@1.9.2"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+    }
+
+    .con {
+      padding-left: 240px;
+      padding-top: 40px;
+      max-width: 600px;
+    }
+
+    h1 {
+      margin-bottom: 1.5rem;
+    }
+
+    .toggle-buttons {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 1.5rem;
+    }
+
+    .toggle-buttons button {
+      padding: 8px 16px;
+      border: none;
+      background-color: #e0e0e0;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+
+    .toggle-buttons button.active {
+      background-color: #1565c0;
+      color: white;
+    }
+
+    .form-section {
+      display: none;
+    }
+
+    .form-section.active {
+      display: block;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    label {
+      font-weight: bold;
+    }
+
+    input[type="text"] {
+      padding: 8px;
+      font-size: 1rem;
+    }
+
+    .drop-zone {
+      border: 2px dashed #999;
+      border-radius: 6px;
+      padding: 30px;
+      text-align: center;
+      color: #777;
+      background-color: #f9f9f9;
+      cursor: pointer;
+      transition: background-color 0.2s ease-in-out;
+    }
+
+    .drop-zone.dragover {
+      background-color: #e3f2fd;
+      color: #1565c0;
+      border-color: #1565c0;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    button[type="submit"] {
+      padding: 10px 20px;
+      font-size: 1rem;
+      background-color: #1565c0;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      align-self: flex-start;
+      margin-top: 20px;
+    }
+
+    #result {
+      margin-top: 2rem;
+    }
+
+    .status-label {
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+
+    .status-label.good {
+      background-color: #e0f8e9;
+      color: #1a7f37;
+    }
+
+    .status-label.revoked {
+      background-color: #fdecea;
+      color: #d93025;
+    }
+
+    .status-label.suspended {
+      background-color: #fff3cd;
+      color: #856404;
+    }
+
+    .status-label.unknown {
+      background-color: #e8e8e8;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+<div th:replace="fragments/nav :: navigation"></div>
+
+<div class="con">
+  <h1>인증서 상태 조회</h1>
+
+  <div class="toggle-buttons">
+    <button type="button" class="active" onclick="toggleForm('serial')">🔢 일련번호 입력</button>
+    <button type="button" onclick="toggleForm('file')">📄 인증서 업로드</button>
+  </div>
+
+  <!-- 일련번호 입력 방식 -->
+  <form id="form-serial" class="form-section active"
+        hx-post="/ocsp/check/serial"
+        hx-target="#result"
+        hx-swap="innerHTML">
+    <label>
+      일련번호 (Hex):
+      <input type="text" name="serial" placeholder="예: 0A1B2C3D..." required/>
+    </label>
+    <button type="submit">상태 확인</button>
+  </form>
+
+  <form id="form-file" class="form-section"
+        hx-post="/ocsp/check/file"
+        hx-target="#result"
+        hx-swap="innerHTML"
+        enctype="multipart/form-data">
+    <label>
+      인증서 파일 업로드 (PEM):
+      <div class="drop-zone" id="drop-zone">
+        여기로 인증서 파일을 끌어다 놓거나 클릭해서 선택하세요
+      </div>
+      <input type="file" name="certFile" id="certFileInput" class="hidden" required/>
+    </label>
+    <button type="submit">상태 확인</button>
+  </form>
+
+  <div id="result"></div>
+</div>
+
+<script>
+  function toggleForm(type) {
+    const serialBtn = document.querySelector('.toggle-buttons button:nth-child(1)');
+    const fileBtn = document.querySelector('.toggle-buttons button:nth-child(2)');
+    const serialForm = document.getElementById('form-serial');
+    const fileForm = document.getElementById('form-file');
+
+    if (type === 'serial') {
+      serialBtn.classList.add('active');
+      fileBtn.classList.remove('active');
+      serialForm.classList.add('active');
+      fileForm.classList.remove('active');
+    } else {
+      fileBtn.classList.add('active');
+      serialBtn.classList.remove('active');
+      fileForm.classList.add('active');
+      serialForm.classList.remove('active');
+    }
+  }
+
+  const dropZone = document.getElementById('drop-zone');
+  const fileInput = document.getElementById('certFileInput');
+
+  const allowedExtensions = ['pem', 'der'];
+
+  function getExtension(fileName) {
+    return fileName.split('.').pop().toLowerCase();
+  }
+
+  function isValidFile(file) {
+    const ext = getExtension(file.name);
+    return allowedExtensions.includes(ext);
+  }
+
+  fileInput.addEventListener('change', (event) => {
+    const file = event.target.files[0];
+    if (!file) {
+      return;
+    }
+
+    if (!isValidFile(file)) {
+      alert("PEM 또는 DER 형식의 파일만 업로드할 수 있습니다.");
+      fileInput.value = "";
+      dropZone.textContent = "여기로 인증서 파일을 끌어다 놓거나 클릭해서 선택하세요";
+      return;
+    }
+
+    dropZone.textContent = `선택된 파일: ${file.name}`;
+  });
+
+  dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('drag-over');
+  });
+
+  dropZone.addEventListener('dragleave', () => {
+    dropZone.classList.remove('drag-over');
+  });
+
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+
+    const files = e.dataTransfer.files;
+    if (files.length !== 1) {
+      alert("하나의 파일만 업로드할 수 있습니다.");
+      return;
+    }
+
+    const file = files[0];
+    if (!isValidFile(file)) {
+      alert("PEM 또는 DER 형식의 파일만 업로드할 수 있습니다.");
+      return;
+    }
+
+    fileInput.files = files;
+    dropZone.textContent = `선택된 파일: ${file.name}`;
+  });
+</script>
+</body>
+</html>

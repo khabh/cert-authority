@@ -4,5 +4,5 @@ public enum CertificateStatus {
     GOOD,
     REVOKED,
     SUSPENDED,
-    ;
+    UNKNOWN;
 }

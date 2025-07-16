@@ -1,0 +1,15 @@
+<div th:fragment="result"
+     style="border: 1px solid #ccc; padding: 20px; border-radius: 8px; background-color: #f9f9f9; max-width: 500px; margin-top: 20px;">
+  <h2 style="margin-bottom: 16px; font-size: 1.5em; color: #333;">조회 결과</h2>
+
+  <p style="margin-bottom: 10px;">
+    <strong style="display: inline-block; width: 80px;">Serial:</strong>
+    <span th:text="${serial}"></span>
+  </p>
+
+  <p style="margin-bottom: 0;">
+    <strong style="display: inline-block; width: 80px;">Status:</strong>
+    <span th:text="${status}"
+          th:classappend="'status-label ' + ${status.name().toLowerCase()}"></span>
+  </p>
+</div>
