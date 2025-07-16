@@ -20,9 +20,11 @@ class DataInitializer implements ApplicationRunner {
 
     private final CertificateService certificateService;
     private final PolicyService policyService;
+    private final KeyStoreManager keyStoreManager;
 
     @Override
     public void run(ApplicationArguments args) {
+        keyStoreManager.removeAll();
         IntStream.range(1, 4)
                  .mapToObj(number -> new RootCertificateIssueDto(
                      "cn" + number,

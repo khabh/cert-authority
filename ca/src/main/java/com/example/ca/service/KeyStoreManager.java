@@ -7,6 +7,9 @@ import java.security.KeyStoreException;
 import java.security.PrivateKey;
 import java.security.cert.Certificate;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -74,5 +77,37 @@ public class KeyStoreManager {
         String uuid = UUID.randomUUID().toString().substring(0, 5);
 
         return String.format("%s-%s-%s", caType, uuid, timestamp);
+    }
+
+    public void printAll() {
+        try {
+            Enumeration<String> aliases = keyStore.aliases();
+            while (aliases.hasMoreElements()) {
+                String alias = aliases.nextElement();
+                KeyStore.Entry entry = keyStore.getEntry(alias, null);
+                System.out.printf("alias=%s, class=%s%n", alias, entry.getClass().getSimpleName());
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void removeAll() {
+        try {
+            List<String> aliasList = Collections.list(keyStore.aliases());
+
+            for (String alias : aliasList) {
+                try {
+                    keyStore.deleteEntry(alias);
+                    System.out.println("Deleted: " + alias);
+                } catch (Exception ex) {
+                    System.err.println("Failed to delete alias " + alias + ": " + ex.getMessage());
+                    ex.printStackTrace();
+                }
+            }
+
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to remove all entries from KeyStore", e);
+        }
     }
 }
